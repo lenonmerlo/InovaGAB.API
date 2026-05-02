@@ -18,7 +18,7 @@
         public int UserId { get; set; }
         public User User { get; set; } = null!;
 
-        public int? ChallengId { get; set; }
+        public int? ChallengeId { get; set; }
         public Challenge? Challenge { get; set; }
     }
 
