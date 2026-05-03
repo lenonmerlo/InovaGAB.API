@@ -7,11 +7,11 @@ namespace InovaGAB.API.Data
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        public DbSet<User> User => Set<User>();
-        public DbSet<Idea> Idea => Set<Idea>();
-        public DbSet<Project> Project => Set<Project>();
-        public DbSet<StrategicGuideline> StrategicGuideline => Set<StrategicGuideline>();
-        public DbSet<Challenge> Challenge => Set<Challenge>();
+        public DbSet<User> Users => Set<User>();
+        public DbSet<Idea> Ideas => Set<Idea>();
+        public DbSet<Project> Projects => Set<Project>();
+        public DbSet<StrategicGuideline> StrategicGuidelines => Set<StrategicGuideline>();
+        public DbSet<Challenge> Challenges => Set<Challenge>();
 
     }
 }

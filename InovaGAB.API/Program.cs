@@ -1,5 +1,7 @@
 // Program.cs
 using InovaGAB.API.Data;
+using InovaGAB.API.Services.Implementations;
+using InovaGAB.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -67,6 +69,9 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
+// ── Services
+builder.Services.AddScoped<IAuthService, AuthService>();
+
 var app = builder.Build();
 
 // ── Pipeline
@@ -75,6 +80,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 
 app.UseCors("AllowAll");
 app.UseHttpsRedirection();
