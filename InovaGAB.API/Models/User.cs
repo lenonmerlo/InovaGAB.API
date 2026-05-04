@@ -15,7 +15,7 @@
 
     public enum UserRole
     {
-        Employee,
+        Operator,
         Manager,
         Leader
     }
