@@ -11,7 +11,7 @@
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
-        public int CreatedByUserId { get; set; }
+        public int CreatedById { get; set; }
         public User CreatedBy { get; set; } = null!;
     }
 
