@@ -72,6 +72,7 @@ builder.Services.AddCors(options =>
 // ── Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IIdeaService, IdeaService>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
 
 var app = builder.Build();
 
