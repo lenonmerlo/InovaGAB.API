@@ -12,7 +12,7 @@ public class Challenge
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public int CreatedByUserId { get; set; }
+    public int CreatedById { get; set; }
     public User CreatedBy { get; set; } = null!;
 
     public ICollection<Idea> Ideas { get; set; } = new List<Idea>();
