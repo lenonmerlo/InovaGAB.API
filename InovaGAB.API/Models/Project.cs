@@ -8,9 +8,9 @@
         public string Division { get; set; } = string.Empty;
         public ProjectStatus Status { get; set; } = ProjectStatus.Planning;
         public ProjectStage Stage { get; set; } = ProjectStage.Diagnosis;
-        public decimal Investiment { get; set; } = 0;
+        public decimal Investment { get; set; } = 0;
         public decimal FinancialReturn { get; set; } = 0;
-        public decimal Roi => Investiment > 0 ? (FinancialReturn - Investiment) / Investiment * 100 : 0;
+        public decimal Roi => Investment > 0 ? (FinancialReturn - Investment) / Investment * 100 : 0;
         public int ProductivityGain { get; set; } = 0;
         public DateTime StartDate { get; set; }
         public DateTime Deadline { get; set; }
