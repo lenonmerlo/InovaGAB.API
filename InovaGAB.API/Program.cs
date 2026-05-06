@@ -1,5 +1,5 @@
-// Program.cs
 using InovaGAB.API.Data;
+using InovaGAB.API.Middleware;
 using InovaGAB.API.Services.Implementations;
 using InovaGAB.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -77,6 +77,9 @@ builder.Services.AddScoped<IGuidelineService, GuidelineService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 var app = builder.Build();
+
+// ── Middleware
+app.UseMiddleware<AuditMiddleware>();
 
 // ── Auto-migrate
 using (var scope = app.Services.CreateScope())

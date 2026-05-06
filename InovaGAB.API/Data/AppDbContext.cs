@@ -12,6 +12,7 @@ namespace InovaGAB.API.Data
         public DbSet<Project> Projects => Set<Project>();
         public DbSet<StrategicGuideline> StrategicGuidelines => Set<StrategicGuideline>();
         public DbSet<Challenge> Challenges => Set<Challenge>();
+        public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     }
 }

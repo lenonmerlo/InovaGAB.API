@@ -3,6 +3,7 @@ using System;
 using InovaGAB.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace InovaGAB.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260506181259_AddAuditLog")]
+    partial class AddAuditLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -36,6 +39,9 @@ namespace InovaGAB.API.Migrations
                     b.Property<long>("DurationMs")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("Email")
+                        .HasColumnType("text");
+
                     b.Property<string>("Endpoint")
                         .IsRequired()
                         .HasColumnType("text");
@@ -44,16 +50,11 @@ namespace InovaGAB.API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Role")
+                        .HasColumnType("text");
+
                     b.Property<int>("StatusCode")
                         .HasColumnType("integer");
-
-                    b.Property<string>("UserEmail")
-                        .HasColumnType("text")
-                        .HasColumnName("UserEmail");
-
-                    b.Property<string>("UserRole")
-                        .HasColumnType("text")
-                        .HasColumnName("UserRole");
 
                     b.HasKey("Id");
 
