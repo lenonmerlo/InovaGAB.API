@@ -624,7 +624,9 @@ Projeto desenvolvido para o **Challenge FIAP 2025**.
 
 | Membro | RM |
 |---|---|
-| *(Adicione os nomes e RMs dos integrantes)* | RM XXXXX |
+| Guilherme Luccas da Costa | RM561735 |
+| Lenon Otmar Tonoli Merlo | RM564471 |
+| Matheus Henrique Silva Souza | RM561329 |
 
 ---
 
