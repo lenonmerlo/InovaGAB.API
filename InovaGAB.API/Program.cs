@@ -75,6 +75,7 @@ builder.Services.AddScoped<IIdeaService, IdeaService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<IGuidelineService, GuidelineService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IChallengeService, ChallengeService>();
 
 var app = builder.Build();
 

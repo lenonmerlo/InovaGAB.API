@@ -1,4 +1,4 @@
-﻿// Models/Challenge.cs
+﻿
 namespace InovaGAB.API.Models;
 
 public class Challenge
