@@ -34,6 +34,24 @@ API RESTful desenvolvida como solução para o desafio proposto pela FIAP, com f
 
 ---
 
+## 🎓 Para Avaliadores
+
+O banco de dados está hospedado no **Supabase (PostgreSQL em nuvem)** — região São Paulo.
+As credenciais de acesso não são versionadas por segurança.
+
+Para executar o projeto, configure as seguintes variáveis de ambiente antes de rodar o Docker:
+
+| Variável | Descrição |
+|---|---|
+| `ConnectionStrings__DefaultConnection` | String de conexão Supabase (solicitar ao autor) |
+| `Jwt__Key` | Chave secreta JWT (solicitar ao autor) |
+| `Jwt__Issuer` | `InovaGAB.API` |
+| `Jwt__Audience` | `InovaGAB.App` |
+
+**Contato:** lenontm@gmail.com
+
+> As migrations são aplicadas automaticamente na inicialização — não é necessário rodar `dotnet ef database update`.
+
 ## 🚀 Visão Geral
 
 O **InovaGAB** é um sistema de gestão de inovação interno para empresas. Seu ciclo principal é:
