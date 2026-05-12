@@ -6,7 +6,7 @@ API RESTful desenvolvida como solução para o desafio proposto pela FIAP, com f
 
 ---
 
-## 📋 Índice
+## Índice
 
 - [Visão Geral](#-visão-geral)
 - [Arquitetura](#-arquitetura)
@@ -34,7 +34,7 @@ API RESTful desenvolvida como solução para o desafio proposto pela FIAP, com f
 
 ---
 
-## 🎓 Para Avaliadores
+## Para Avaliadores
 
 O banco de dados está hospedado no **Supabase (PostgreSQL em nuvem)** — região São Paulo.
 As credenciais de acesso não são versionadas por segurança.
@@ -52,7 +52,7 @@ Para executar o projeto, configure as seguintes variáveis de ambiente antes de 
 
 > As migrations são aplicadas automaticamente na inicialização — não é necessário rodar `dotnet ef database update`.
 
-## 🚀 Visão Geral
+## Visão Geral
 
 O **InovaGAB** é um sistema de gestão de inovação interno para empresas. Seu ciclo principal é:
 
@@ -72,7 +72,7 @@ Além disso, gestores e líderes podem criar **Desafios** temáticos para incent
 
 ---
 
-## 🏗 Arquitetura
+## Arquitetura
 
 ```
 InovaGAB.API/
@@ -93,7 +93,7 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 
 ---
 
-## 🛠 Tecnologias
+## Tecnologias
 
 | Tecnologia | Versão | Função |
 |---|---|---|
@@ -109,7 +109,7 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 
 ---
 
-## 📦 Modelos de Domínio
+## Modelos de Domínio
 
 ### `User` — Usuário
 | Campo | Tipo | Descrição |
@@ -200,7 +200,7 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 
 ---
 
-## 👤 Perfis de Usuário (Roles)
+## Perfis de Usuário (Roles)
 
 | Role | Nome | Permissões |
 |---|---|---|
@@ -210,7 +210,7 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 
 ---
 
-## 📡 Endpoints da API
+## Endpoints da API
 
 > Todos os endpoints (exceto `/api/auth/register` e `/api/auth/login`) requerem o header:
 > ```
@@ -385,7 +385,7 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 
 ---
 
-## 🔐 Autenticação e Autorização
+## Autenticação e Autorização
 
 A API utiliza **JWT (JSON Web Token)** com as seguintes configurações:
 
@@ -402,7 +402,7 @@ Para autenticar no Swagger:
 
 ---
 
-## ⚙️ Configuração do Ambiente
+## Configuração do Ambiente
 
 ### Pré-requisitos
 
@@ -436,7 +436,7 @@ Crie ou edite o arquivo `InovaGAB.API/appsettings.json`:
 }
 ```
 
-> ⚠️ **Nunca versione `appsettings.json` com credenciais reais.** Use `appsettings.Development.json` ou variáveis de ambiente para ambientes locais.
+> **Atenção:** Nunca versione
 
 #### Usando Supabase (Connection String)
 ```
@@ -445,7 +445,7 @@ Host=aws-0-sa-east-1.pooler.supabase.com;Port=5432;Database=postgres;Username=po
 
 ---
 
-## ▶️ Executando a Aplicação
+## Executando a Aplicação
 
 ### Localmente (Visual Studio / .NET CLI)
 
@@ -494,7 +494,7 @@ Swagger em: `http://localhost:8080/swagger`
 
 ---
 
-## 🗃 Banco de Dados e Migrations
+## Banco de Dados e Migrations
 
 O projeto utiliza **EF Core Migrations** para versionamento do schema.
 
@@ -527,7 +527,7 @@ dotnet ef migrations list --project InovaGAB.API
 
 ---
 
-## 🔧 Variáveis de Ambiente / appsettings
+## Variáveis de Ambiente / appsettings
 
 | Chave | Descrição | Exemplo |
 |---|---|---|
@@ -539,7 +539,7 @@ dotnet ef migrations list --project InovaGAB.API
 
 ---
 
-## 📖 Swagger / Documentação Interativa
+## Swagger / Documentação Interativa
 
 O Swagger UI está habilitado no ambiente de desenvolvimento:
 
@@ -553,7 +553,7 @@ Recursos disponíveis no Swagger:
 
 ---
 
-## 🕵️ Auditoria
+## Auditoria
 
 Todas as requisições autenticadas são registradas automaticamente na tabela `AuditLogs` via `AuditMiddleware`. São capturados:
 
@@ -567,7 +567,7 @@ Rotas excluídas da auditoria: `/swagger`, `/health`, e requisições de usuári
 
 ---
 
-## 📁 Estrutura de Pastas
+## Estrutura de Pastas
 
 ```
 InovaGAB.API/
@@ -636,7 +636,7 @@ InovaGAB.API/
 
 ---
 
-## 👥 Grupo Águia Branca
+## Grupo Águia Branca
 
 Projeto desenvolvido para o **Challenge FIAP 2025**.
 
@@ -648,6 +648,6 @@ Projeto desenvolvido para o **Challenge FIAP 2025**.
 
 ---
 
-## 📄 Licença
+## Licença
 
 Este projeto foi desenvolvido exclusivamente para fins acadêmicos no contexto do Challenge da FIAP.
