@@ -2,35 +2,41 @@
 
 > **FIAP – Challenge 2025 | Grupo Águia Branca**
 
+![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?style=flat&logo=dotnet&logoColor=white)
+![C#](https://img.shields.io/badge/C%23-12.0-239120?style=flat&logo=csharp&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-4169E1?style=flat&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat&logo=docker&logoColor=white)
+![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat&logo=swagger&logoColor=black)
+![JWT](https://img.shields.io/badge/Auth-JWT-000000?style=flat&logo=jsonwebtokens&logoColor=white)
+
 API RESTful desenvolvida como solução para o desafio proposto pela FIAP, com foco em gestão de inovação corporativa. A plataforma permite que colaboradores submetam ideias, gestores as avaliem e promovam a projetos, líderes acompanhem indicadores estratégicos e toda a organização participe de desafios internos de inovação.
 
 ---
 
 ## Índice
 
-- [Visão Geral](#-visão-geral)
-- [Arquitetura](#-arquitetura)
-- [Tecnologias](#-tecnologias)
-- [Modelos de Domínio](#-modelos-de-domínio)
-- [Perfis de Usuário (Roles)](#-perfis-de-usuário-roles)
-- [Endpoints da API](#-endpoints-da-api)
+- [Para Avaliadores](#para-avaliadores)
+- [Visão Geral](#visão-geral)
+- [Arquitetura](#arquitetura)
+- [Tecnologias](#tecnologias)
+- [Modelos de Domínio](#modelos-de-domínio)
+- [Perfis de Usuário (Roles)](#perfis-de-usuário-roles)
+- [Endpoints da API](#endpoints-da-api)
   - [Auth](#auth)
   - [Ideias](#ideias)
   - [Projetos](#projetos)
   - [Desafios](#desafios)
   - [Diretrizes Estratégicas](#diretrizes-estratégicas)
   - [Dashboard](#dashboard)
-- [Autenticação e Autorização](#-autenticação-e-autorização)
-- [Configuração do Ambiente](#-configuração-do-ambiente)
-- [Executando a Aplicação](#-executando-a-aplicação)
-  - [Localmente (Visual Studio / .NET CLI)](#localmente-visual-studio--net-cli)
-  - [Com Docker](#com-docker)
-- [Banco de Dados e Migrations](#-banco-de-dados-e-migrations)
-- [Variáveis de Ambiente / appsettings](#-variáveis-de-ambiente--appsettings)
-- [Swagger / Documentação Interativa](#-swagger--documentação-interativa)
-- [Auditoria](#-auditoria)
-- [Estrutura de Pastas](#-estrutura-de-pastas)
-- [Grupo Águia Branca](#-grupo-águia-branca)
+- [Autenticação e Autorização](#autenticação-e-autorização)
+- [Configuração do Ambiente](#configuração-do-ambiente)
+- [Executando a Aplicação](#executando-a-aplicação)
+- [Banco de Dados e Migrations](#banco-de-dados-e-migrations)
+- [Variáveis de Ambiente](#variáveis-de-ambiente)
+- [Swagger](#swagger--documentação-interativa)
+- [Auditoria](#auditoria)
+- [Estrutura de Pastas](#estrutura-de-pastas)
+- [Equipe](#equipe)
 
 ---
 
@@ -39,18 +45,34 @@ API RESTful desenvolvida como solução para o desafio proposto pela FIAP, com f
 O banco de dados está hospedado no **Supabase (PostgreSQL em nuvem)** — região São Paulo.
 As credenciais de acesso não são versionadas por segurança.
 
-Para executar o projeto, configure as seguintes variáveis de ambiente antes de rodar o Docker:
+**Forma mais rápida de rodar:**
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/lenonmerlo/InovaGAB.API.git
+cd InovaGAB.API
+
+# 2. Copie o arquivo de exemplo e preencha com as credenciais
+cp .env.example .env
+
+# 3. Suba a aplicação
+docker-compose up --build
+```
+
+Acesse o Swagger em: **http://localhost:8080/swagger**
 
 | Variável | Descrição |
 |---|---|
-| `ConnectionStrings__DefaultConnection` | String de conexão Supabase (solicitar ao autor) |
-| `Jwt__Key` | Chave secreta JWT (solicitar ao autor) |
-| `Jwt__Issuer` | `InovaGAB.API` |
-| `Jwt__Audience` | `InovaGAB.App` |
+| `DB_CONNECTION` | String de conexão Supabase (solicitar ao autor) |
+| `JWT_KEY` | Chave secreta JWT (solicitar ao autor) |
+| `JWT_ISSUER` | `InovaGAB.API` |
+| `JWT_AUDIENCE` | `InovaGAB.App` |
 
 **Contato:** lenontm@gmail.com
 
 > As migrations são aplicadas automaticamente na inicialização — não é necessário rodar `dotnet ef database update`.
+
+---
 
 ## Visão Geral
 
@@ -59,16 +81,16 @@ O **InovaGAB** é um sistema de gestão de inovação interno para empresas. Seu
 ```
 Operador submete ideia
         ↓
-Gestor avalia e aprova/rejeita
+Gestor avalia e aprova/rejeita com Score de Impacto
         ↓
 Ideia aprovada vira Projeto
         ↓
 Projeto é monitorado (ROI, investimento, ganho de produtividade)
         ↓
-Liderança acompanha métricas no Dashboard
+Liderança acompanha métricas no Dashboard executivo
 ```
 
-Além disso, gestores e líderes podem criar **Desafios** temáticos para incentivar a submissão de ideias em áreas específicas, e **Diretrizes Estratégicas** para alinhar as iniciativas com a estratégia da organização.
+Além disso, a **Liderança** pode criar **Desafios** temáticos para incentivar a submissão de ideias em áreas específicas, e **Diretrizes Estratégicas** para alinhar as iniciativas com a estratégia da organização.
 
 ---
 
@@ -89,7 +111,7 @@ InovaGAB.API/
 └── Migrations/          # Histórico de migrações EF Core
 ```
 
-A aplicação segue o padrão **Controller → Service → Repository (EF Core)**, com separação clara entre DTOs e entidades de domínio.
+A aplicação segue o padrão **Controller → Service → EF Core**, com separação clara entre DTOs e entidades de domínio.
 
 ---
 
@@ -101,7 +123,7 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 | **ASP.NET Core** | 9.0 | Framework Web / API |
 | **Entity Framework Core** | 9.0.4 | ORM / acesso a dados |
 | **Npgsql (EF Core)** | 9.0.4 | Provider PostgreSQL |
-| **PostgreSQL** | — | Banco de dados relacional |
+| **PostgreSQL / Supabase** | — | Banco de dados em nuvem |
 | **JWT Bearer** | 9.0.4 | Autenticação via token |
 | **BCrypt.Net-Next** | 4.1.0 | Hash seguro de senhas |
 | **Swashbuckle (Swagger)** | 6.9.0 | Documentação interativa da API |
@@ -123,8 +145,6 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 | `Points` | int | Pontuação acumulada por contribuições |
 | `CreatedAt` | DateTime | Data de criação |
 
----
-
 ### `Idea` — Ideia
 | Campo | Tipo | Descrição |
 |---|---|---|
@@ -136,12 +156,10 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 | `ImpactScore` | int | Nota de impacto (0–10) |
 | `FeasibilityScore` | int | Nota de viabilidade (0–10) |
 | `AlignmentScore` | int | Nota de alinhamento estratégico (0–10) |
-| `TotalScore` | int | Média calculada dos três scores |
+| `TotalScore` | int | Média calculada automaticamente |
 | `EvidenceUrl` | string? | URL de evidência/anexo |
 | `ChallengeId` | int? | Desafio vinculado (opcional) |
 | `UserId` | int | Autor da ideia |
-
----
 
 ### `Project` — Projeto
 | Campo | Tipo | Descrição |
@@ -149,16 +167,16 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 | `Id` | int | Identificador único |
 | `Title` | string | Título do projeto |
 | `Division` | string | Divisão responsável |
-| `Status` | ProjectStatus | `Planning`, `InProgress`, `Completed`, `Cancelled` |
-| `Stage` | string | Etapa atual |
-| `Investment` | decimal | Investimento total |
-| `FinancialReturn` | decimal | Retorno financeiro esperado |
-| `Roi` | decimal | ROI calculado automaticamente |
-| `ProductivityGain` | decimal | Ganho de produtividade (%) |
+| `Status` | ProjectStatus | `Planning`, `InProgress`, `Completed`, `OnHold`, `Cancelled` |
+| `Stage` | ProjectStage | `Diagnosis`, `Implementation`, `Validation`, `Closure` |
+| `Investment` | decimal | Investimento total (R$) |
+| `FinancialReturn` | decimal | Retorno financeiro (R$) |
+| `Roi` | decimal | ROI calculado automaticamente (%) |
+| `ProductivityGain` | int | Ganho de produtividade (%) |
+| `ProgressPercent` | int | Progresso geral (0–100) |
+| `Deadline` | DateTime | Prazo de entrega |
 | `ManagerId` | int | Gestor responsável |
 | `IdeaId` | int? | Ideia de origem |
-
----
 
 ### `Challenge` — Desafio
 | Campo | Tipo | Descrição |
@@ -166,13 +184,12 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 | `Id` | int | Identificador único |
 | `Title` | string | Título do desafio |
 | `Description` | string | Descrição e critérios |
-| `Prize` | decimal | Prêmio oferecido |
+| `Prize` | decimal | Prêmio oferecido (R$) |
 | `StartDate` | DateTime | Início das submissões |
 | `EndDate` | DateTime | Prazo final |
+| `DaysRemaining` | int | Dias restantes (calculado automaticamente) |
 | `IsActive` | bool | Desafio aberto para submissões |
 | `CreatedById` | int | Usuário que criou o desafio |
-
----
 
 ### `StrategicGuideline` — Diretriz Estratégica
 | Campo | Tipo | Descrição |
@@ -180,11 +197,10 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 | `Id` | int | Identificador único |
 | `Title` | string | Título da diretriz |
 | `Description` | string | Detalhamento |
-| `Priority` | string | Prioridade (ex.: Alta, Média, Baixa) |
+| `Priority` | GuidelinePriority | `Low`, `Medium`, `High` |
 | `Category` | string | Categoria temática |
+| `IsActive` | bool | Ativo (soft delete) |
 | `CreatedById` | int | Usuário responsável |
-
----
 
 ### `AuditLog` — Log de Auditoria
 | Campo | Tipo | Descrição |
@@ -196,7 +212,7 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 | `UserRole` | string | Role do usuário no momento |
 | `StatusCode` | int | Código de resposta HTTP |
 | `DurationMs` | long | Tempo de execução em ms |
-| `Timestamp` | DateTime | Momento do acesso |
+| `CreatedAt` | DateTime | Momento do acesso |
 
 ---
 
@@ -204,41 +220,39 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 
 | Role | Nome | Permissões |
 |---|---|---|
-| `Operator` | Operador | Submeter ideias, visualizar próprias ideias |
-| `Manager` | Gestor | Aprovar/rejeitar ideias, criar e gerenciar projetos, criar desafios e diretrizes |
-| `Leader` | Liderança | Acesso total de leitura, dashboard executivo, visualização de todos os projetos e ideias |
+| `Operator` | Operador | Submeter ideias, visualizar próprias ideias, ver diretrizes e desafios |
+| `Manager` | Gestor | Aprovar/rejeitar ideias, criar e gerenciar projetos, ver todas as ideias |
+| `Leader` | Liderança | Dashboard executivo, CRUD de diretrizes e desafios, visão total de projetos |
 
 ---
 
 ## Endpoints da API
 
-> Todos os endpoints (exceto `/api/auth/register` e `/api/auth/login`) requerem o header:
+> Todos os endpoints (exceto `/api/Auth/register` e `/api/Auth/login`) requerem o header:
 > ```
 > Authorization: Bearer {seu_token_jwt}
 > ```
-
----
 
 ### Auth
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `POST` | `/api/auth/register` | Público | Cadastro de novo usuário |
-| `POST` | `/api/auth/login` | Público | Login e geração do token JWT |
+| `POST` | `/api/Auth/register` | Público | Cadastro de novo usuário |
+| `POST` | `/api/Auth/login` | Público | Login e geração do token JWT |
 
-#### `POST /api/auth/register`
+#### `POST /api/Auth/register`
 ```json
 {
   "name": "João Silva",
   "email": "joao@empresa.com",
   "password": "Senha@123",
-  "role": 0,
+  "role": "0",
   "division": "Tecnologia"
 }
 ```
-> `role`: `0` = Operator, `1` = Manager, `2` = Leader
+> `role`: `"0"` = Operator, `"1"` = Manager, `"2"` = Leader
 
-#### `POST /api/auth/login`
+#### `POST /api/Auth/login`
 ```json
 {
   "email": "joao@empresa.com",
@@ -250,7 +264,9 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "name": "João Silva",
-  "role": "Operator"
+  "email": "joao@empresa.com",
+  "role": "Operator",
+  "division": "Tecnologia"
 }
 ```
 
@@ -260,13 +276,13 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 
 | Método | Rota | Role | Descrição |
 |---|---|---|---|
-| `POST` | `/api/idea` | Operator | Submeter nova ideia |
-| `GET` | `/api/idea/my` | Operator | Listar próprias ideias |
-| `GET` | `/api/idea` | Manager, Leader | Listar todas as ideias |
-| `PATCH` | `/api/idea/{id}/approve` | Manager | Aprovar ideia com scores |
-| `PATCH` | `/api/idea/{id}/reject` | Manager | Rejeitar ideia |
+| `POST` | `/api/Idea` | Operator | Submeter nova ideia |
+| `GET` | `/api/Idea/my` | Operator | Listar próprias ideias |
+| `GET` | `/api/Idea` | Manager, Leader | Listar todas as ideias ordenadas por score |
+| `PATCH` | `/api/Idea/{id}/approve` | Manager | Aprovar ideia com scores de impacto |
+| `PATCH` | `/api/Idea/{id}/reject` | Manager | Rejeitar ideia |
 
-#### `POST /api/idea`
+#### `POST /api/Idea`
 ```json
 {
   "title": "Automação do processo X",
@@ -277,7 +293,7 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 }
 ```
 
-#### `PATCH /api/idea/{id}/approve`
+#### `PATCH /api/Idea/{id}/approve`
 ```json
 {
   "impactScore": 8,
@@ -292,24 +308,36 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 
 | Método | Rota | Role | Descrição |
 |---|---|---|---|
-| `POST` | `/api/project` | Manager | Criar projeto a partir de uma ideia |
-| `GET` | `/api/project` | Manager, Leader | Listar todos os projetos |
-| `GET` | `/api/project/{id}` | Manager, Leader | Detalhar um projeto |
-| `PUT` | `/api/project/{id}` | Manager | Atualizar dados do projeto |
-| `DELETE` | `/api/project/{id}` | Manager | Remover projeto |
+| `POST` | `/api/Project` | Manager | Criar projeto |
+| `GET` | `/api/Project` | Manager, Leader | Listar todos os projetos |
+| `GET` | `/api/Project/{id}` | Manager, Leader | Detalhar um projeto |
+| `PUT` | `/api/Project/{id}` | Manager | Atualizar dados do projeto |
 
-#### `POST /api/project`
+#### `POST /api/Project`
 ```json
 {
   "title": "Projeto RPA Operações",
+  "description": "Automação de processos manuais",
   "division": "Operações",
-  "stage": "Planejamento",
   "investment": 50000.00,
-  "financialReturn": 150000.00,
-  "productivityGain": 30.5,
+  "startDate": "2026-06-01T00:00:00Z",
+  "deadline": "2026-09-01T00:00:00Z",
   "ideaId": 12
 }
 ```
+
+#### `PUT /api/Project/{id}`
+```json
+{
+  "status": 1,
+  "stage": 1,
+  "progressPercent": 65,
+  "financialReturn": 150000.00,
+  "productivityGain": 30
+}
+```
+> `status`: `0`=Planning, `1`=InProgress, `2`=Completed, `3`=OnHold, `4`=Cancelled
+> `stage`: `0`=Diagnosis, `1`=Implementation, `2`=Validation, `3`=Closure
 
 ---
 
@@ -317,20 +345,19 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 
 | Método | Rota | Role | Descrição |
 |---|---|---|---|
-| `POST` | `/api/challenge` | Manager, Leader | Criar novo desafio |
-| `GET` | `/api/challenge` | Todos | Listar desafios ativos |
-| `GET` | `/api/challenge/{id}` | Todos | Detalhar desafio e suas ideias |
-| `PUT` | `/api/challenge/{id}` | Manager, Leader | Atualizar desafio |
-| `DELETE` | `/api/challenge/{id}` | Manager, Leader | Remover desafio |
+| `POST` | `/api/Challenge` | Leader | Criar novo desafio |
+| `GET` | `/api/Challenge` | Todos | Listar desafios ativos |
+| `GET` | `/api/Challenge/{id}` | Todos | Detalhar desafio e suas ideias |
+| `PUT` | `/api/Challenge/{id}` | Leader | Atualizar desafio |
 
-#### `POST /api/challenge`
+#### `POST /api/Challenge`
 ```json
 {
-  "title": "Sustentabilidade 2025",
+  "title": "Sustentabilidade 2026",
   "description": "Ideias para redução de emissão de carbono",
   "prize": 5000.00,
-  "startDate": "2025-06-01T00:00:00Z",
-  "endDate": "2025-08-31T23:59:59Z"
+  "startDate": "2026-06-01T00:00:00Z",
+  "endDate": "2026-08-31T23:59:59Z"
 }
 ```
 
@@ -340,21 +367,22 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 
 | Método | Rota | Role | Descrição |
 |---|---|---|---|
-| `POST` | `/api/guideline` | Manager, Leader | Criar diretriz |
-| `GET` | `/api/guideline` | Todos | Listar diretrizes |
-| `GET` | `/api/guideline/{id}` | Todos | Detalhar diretriz |
-| `PUT` | `/api/guideline/{id}` | Manager, Leader | Atualizar diretriz |
-| `DELETE` | `/api/guideline/{id}` | Manager, Leader | Remover diretriz |
+| `POST` | `/api/Guideline` | Leader | Criar diretriz |
+| `GET` | `/api/Guideline` | Todos | Listar diretrizes ativas |
+| `GET` | `/api/Guideline/{id}` | Todos | Detalhar diretriz |
+| `PUT` | `/api/Guideline/{id}` | Leader | Atualizar diretriz |
+| `DELETE` | `/api/Guideline/{id}` | Leader | Remover diretriz (soft delete) |
 
-#### `POST /api/guideline`
+#### `POST /api/Guideline`
 ```json
 {
   "title": "Transformação Digital",
   "description": "Acelerar a digitalização dos processos internos",
-  "priority": "Alta",
+  "priority": "High",
   "category": "Tecnologia"
 }
 ```
+> `priority`: `"Low"`, `"Medium"`, `"High"`
 
 ---
 
@@ -362,21 +390,22 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 
 | Método | Rota | Role | Descrição |
 |---|---|---|---|
-| `GET` | `/api/dashboard` | Manager, Leader | Métricas executivas consolidadas |
+| `GET` | `/api/Dashboard` | Leader | Métricas executivas consolidadas |
 
 **Resposta:**
 ```json
 {
   "totalRoi": 320000.00,
   "totalSavings": 180000.00,
-  "productivityGainAverage": 24.5,
+  "productivityGainAverage": 24,
   "activeProjects": 8,
   "delayedProjects": 2,
   "ideaFunnel": {
-    "submitted": 45,
+    "totalSubmitted": 45,
     "underReview": 12,
     "approved": 20,
-    "rejected": 13
+    "rejected": 13,
+    "convertedToProjects": 8
   },
   "topProjects": [...],
   "topContributors": [...]
@@ -390,12 +419,12 @@ A aplicação segue o padrão **Controller → Service → Repository (EF Core)*
 A API utiliza **JWT (JSON Web Token)** com as seguintes configurações:
 
 - Algoritmo: **HMAC SHA-256**
-- Claims incluídos no token: `sub` (userId), `email`, `role`
-- Validade configurável via `appsettings.json`
-- Senhas armazenadas com **BCrypt** (cost factor padrão)
+- Claims incluídos no token: `nameidentifier` (userId), `email`, `name`, `role`
+- Validade: **8 horas**
+- Senhas armazenadas com **BCrypt**
 
 Para autenticar no Swagger:
-1. Faça login em `POST /api/auth/login`
+1. Faça login em `POST /api/Auth/login`
 2. Copie o `token` retornado
 3. Clique em **Authorize** (canto superior direito do Swagger UI)
 4. Insira: `Bearer eyJhbGci...`
@@ -407,96 +436,57 @@ Para autenticar no Swagger:
 ### Pré-requisitos
 
 - [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- [PostgreSQL](https://www.postgresql.org/) ou conta no [Supabase](https://supabase.com/)
-- [Docker](https://www.docker.com/) *(opcional)*
-- [Visual Studio 2022+](https://visualstudio.microsoft.com/) ou [VS Code](https://code.visualstudio.com/)
+- [Docker](https://www.docker.com/)
+- Conta no [Supabase](https://supabase.com/) *(ou PostgreSQL local)*
 
-### `appsettings.json`
+### Variáveis de ambiente
 
-Crie ou edite o arquivo `InovaGAB.API/appsettings.json`:
+Copie o arquivo de exemplo e preencha com suas credenciais:
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=inovagab;Username=postgres;Password=sua_senha"
-  },
-  "Jwt": {
-    "Key": "sua_chave_secreta_com_pelo_menos_32_caracteres",
-    "Issuer": "InovaGAB",
-    "Audience": "InovaGAB",
-    "ExpiresInMinutes": 60
-  },
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
-  },
-  "AllowedHosts": "*"
-}
+```bash
+cp .env.example .env
 ```
 
-> **Atenção:** Nunca versione
-
-#### Usando Supabase (Connection String)
-```
-Host=aws-0-sa-east-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.XXXX;Password=sua_senha;SSL Mode=Require;Trust Server Certificate=true
-```
+| Variável | Descrição |
+|---|---|
+| `DB_CONNECTION` | String de conexão PostgreSQL/Supabase |
+| `JWT_KEY` | Chave secreta JWT (mín. 32 caracteres) |
+| `JWT_ISSUER` | Emissor do token (padrão: `InovaGAB.API`) |
+| `JWT_AUDIENCE` | Audiência do token (padrão: `InovaGAB.App`) |
 
 ---
 
 ## Executando a Aplicação
 
-### Localmente (Visual Studio / .NET CLI)
+### Com Docker Compose *(recomendado)*
+
+```bash
+docker-compose up --build
+```
+
+Swagger em: **http://localhost:8080/swagger**
+
+> As migrations são aplicadas automaticamente na inicialização.
+
+### Localmente (.NET CLI)
 
 ```bash
 # Restaurar pacotes
 dotnet restore
 
-# Aplicar migrations ao banco de dados
-dotnet ef database update --project InovaGAB.API
+# Configurar User Secrets (credenciais locais)
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "sua_connection_string"
+dotnet user-secrets set "Jwt:Key" "sua_chave_secreta"
 
 # Executar a API
 dotnet run --project InovaGAB.API
 ```
 
-A API estará disponível em:
-- `https://localhost:7XXX` (HTTPS)
-- `http://localhost:5XXX` (HTTP)
-
-Acesse o Swagger em: `https://localhost:7XXX/swagger`
-
----
-
-### Com Docker
-
-```bash
-# Build da imagem
-docker build -t inovagab-api ./InovaGAB.API
-
-# Executar o container
-docker run -p 8080:8080 \
-  -e ConnectionStrings__DefaultConnection="Host=host.docker.internal;..." \
-  -e Jwt__Key="sua_chave_secreta" \
-  -e Jwt__Issuer="InovaGAB" \
-  -e Jwt__Audience="InovaGAB" \
-  inovagab-api
-```
-
-Ou com **Docker Compose** (se disponível):
-```bash
-docker-compose up --build
-```
-
-Swagger em: `http://localhost:8080/swagger`
-
-> As migrations são aplicadas automaticamente na inicialização via `db.Database.Migrate()`.
-
 ---
 
 ## Banco de Dados e Migrations
 
-O projeto utiliza **EF Core Migrations** para versionamento do schema.
+O projeto utiliza **EF Core Migrations** com aplicação automática no startup.
 
 ### Comandos úteis
 
@@ -504,11 +494,8 @@ O projeto utiliza **EF Core Migrations** para versionamento do schema.
 # Criar nova migration
 dotnet ef migrations add NomeDaMigration --project InovaGAB.API
 
-# Aplicar migrations pendentes
+# Aplicar migrations manualmente
 dotnet ef database update --project InovaGAB.API
-
-# Reverter para migration específica
-dotnet ef database update NomeDaMigration --project InovaGAB.API
 
 # Listar migrations
 dotnet ef migrations list --project InovaGAB.API
@@ -527,43 +514,26 @@ dotnet ef migrations list --project InovaGAB.API
 
 ---
 
-## Variáveis de Ambiente / appsettings
-
-| Chave | Descrição | Exemplo |
-|---|---|---|
-| `ConnectionStrings__DefaultConnection` | String de conexão PostgreSQL | `Host=localhost;...` |
-| `Jwt__Key` | Chave secreta para assinar tokens JWT (mín. 32 chars) | `minha_chave_super_secreta_2025` |
-| `Jwt__Issuer` | Emissor do token | `InovaGAB` |
-| `Jwt__Audience` | Audiência do token | `InovaGAB` |
-| `Jwt__ExpiresInMinutes` | Tempo de expiração do token | `60` |
-
----
-
 ## Swagger / Documentação Interativa
 
 O Swagger UI está habilitado no ambiente de desenvolvimento:
 
-- **URL**: `/swagger` ou `/swagger/index.html`
-- **Especificação JSON**: `/swagger/v1/swagger.json`
-
-Recursos disponíveis no Swagger:
-- Documentação de todos os endpoints
-- Autenticação via Bearer Token integrada
-- Teste de requisições diretamente pelo navegador
+- **URL**: `http://localhost:8080/swagger`
+- **Especificação JSON**: `http://localhost:8080/swagger/v1/swagger.json`
 
 ---
 
 ## Auditoria
 
-Todas as requisições autenticadas são registradas automaticamente na tabela `AuditLogs` via `AuditMiddleware`. São capturados:
+Todas as requisições são registradas automaticamente na tabela `AuditLogs` via `AuditMiddleware`:
 
 - Método HTTP e rota acessada
 - E-mail e role do usuário autenticado
 - Código de resposta HTTP
-- Tempo de execução da requisição (em ms)
+- Tempo de execução em ms
 - Data/hora da requisição
 
-Rotas excluídas da auditoria: `/swagger`, `/health`, e requisições de usuários não autenticados.
+Rotas excluídas: `/swagger` e `/health`.
 
 ---
 
@@ -598,26 +568,12 @@ InovaGAB.API/
 │
 ├── DTOs/
 │   ├── Request/
-│   │   ├── LoginRequest.cs
-│   │   ├── RegisterRequest.cs
-│   │   ├── CreateIdeaRequest.cs
-│   │   ├── ApproveIdeaRequest.cs
-│   │   ├── CreateProjectRequest.cs
-│   │   ├── UpdateProjectRequest.cs
-│   │   ├── CreateChallengeRequest.cs
-│   │   └── CreateGuidelineRequest.cs
 │   └── Response/
-│       ├── AuthResponse.cs
-│       ├── IdeaResponse.cs
-│       ├── ProjectResponse.cs
-│       ├── ChallengeResponse.cs
-│       ├── GuidelineResponse.cs
-│       └── DashboardResponse.cs
 │
 ├── Models/
 │   ├── User.cs          # + enum UserRole
 │   ├── Idea.cs          # + enum IdeaStatus
-│   ├── Project.cs       # + enum ProjectStatus
+│   ├── Project.cs       # + enum ProjectStatus, ProjectStage
 │   ├── Challenge.cs
 │   ├── StrategicGuideline.cs
 │   └── AuditLog.cs
@@ -628,17 +584,16 @@ InovaGAB.API/
 ├── Middleware/
 │   └── AuditMiddleware.cs
 │
-├── Migrations/          # Histórico de migrações EF Core
-│
-├── Program.cs           # Configuração e startup da aplicação
+├── Migrations/
+├── Program.cs
 └── InovaGAB.API.csproj
 ```
 
 ---
 
-## Grupo Águia Branca
+## Equipe
 
-Projeto desenvolvido para o **Challenge FIAP 2025**.
+Projeto desenvolvido para o **Challenge FIAP 2025 — Grupo Águia Branca**.
 
 | Membro | RM |
 |---|---|
