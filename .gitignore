@@ -480,6 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
-d o c k e r - c o m p o s e . y m l  
+d o c k e r - c o m p o s e . y m l 
  
-docker-compose.yml
+ 

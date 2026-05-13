@@ -37,7 +37,7 @@ namespace InovaGAB.API.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles ="Manager, Leader")]
+        [Authorize(Roles ="Manager,Leader")]
         public async Task<IActionResult> GetAll()
         {
             var ideas = await _ideaService.GetAllAsync();
