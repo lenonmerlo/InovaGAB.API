@@ -1,0 +1,25 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    brances: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    staps:
+      - users: actions/checkoutt@v4
+
+      - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with: 
+        dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+      run: dotnet restore InovaGAB.API/InovaGAB.API.csproj
+
+      - name: Build
+        run: dotnet build InovaGAB.API/InovaGAB.API.csproj --no-restore -c Release
