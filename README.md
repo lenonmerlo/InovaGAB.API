@@ -8,6 +8,7 @@
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat&logo=docker&logoColor=white)
 ![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat&logo=swagger&logoColor=black)
 ![JWT](https://img.shields.io/badge/Auth-JWT-000000?style=flat&logo=jsonwebtokens&logoColor=white)
+![Build](https://github.com/lenonmerlo/InovaGAB.API/actions/workflows/build.yml/badge.svg)
 
 API RESTful desenvolvida como solução para o desafio proposto pela FIAP, com foco em gestão de inovação corporativa. A plataforma permite que colaboradores submetam ideias, gestores as avaliem e promovam a projetos, líderes acompanhem indicadores estratégicos e toda a organização participe de desafios internos de inovação.
 
