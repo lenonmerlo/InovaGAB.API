@@ -161,6 +161,8 @@ A aplicação segue o padrão **Controller → Service → EF Core**, com separa
 | `EvidenceUrl`      | string?    | URL de evidência/anexo                             |
 | `ChallengeId`      | int?       | Desafio vinculado (opcional)                       |
 | `UserId`           | int        | Autor da ideia                                     |
+| `CreatedAt`        | DateTime   | Data de criação                                    |
+| `UpdatedAt`        | DateTime   | Data da última atualização                         |
 
 ### `Project` — Projeto
 
@@ -168,6 +170,7 @@ A aplicação segue o padrão **Controller → Service → EF Core**, com separa
 | ------------------ | ------------- | ------------------------------------------------------------ |
 | `Id`               | int           | Identificador único                                          |
 | `Title`            | string        | Título do projeto                                            |
+| `Description`      | string        | Descrição do projeto                                         |
 | `Division`         | string        | Divisão responsável                                          |
 | `Status`           | ProjectStatus | `Planning`, `InProgress`, `Completed`, `OnHold`, `Cancelled` |
 | `Stage`            | ProjectStage  | `Diagnosis`, `Implementation`, `Validation`, `Closure`       |
@@ -176,23 +179,26 @@ A aplicação segue o padrão **Controller → Service → EF Core**, com separa
 | `Roi`              | decimal       | ROI calculado automaticamente (%)                            |
 | `ProductivityGain` | int           | Ganho de produtividade (%)                                   |
 | `ProgressPercent`  | int           | Progresso geral (0–100)                                      |
+| `StartDate`        | DateTime      | Data de início                                               |
 | `Deadline`         | DateTime      | Prazo de entrega                                             |
 | `ManagerId`        | int           | Gestor responsável                                           |
 | `IdeaId`           | int?          | Ideia de origem                                              |
+| `CreatedAt`        | DateTime      | Data de criação                                              |
+| `UpdatedAt`        | DateTime?     | Data da última atualização                                   |
 
 ### `Challenge` — Desafio
 
-| Campo           | Tipo     | Descrição                                  |
-| --------------- | -------- | ------------------------------------------ |
-| `Id`            | int      | Identificador único                        |
-| `Title`         | string   | Título do desafio                          |
-| `Description`   | string   | Descrição e critérios                      |
-| `Prize`         | decimal  | Prêmio oferecido (R$)                      |
-| `StartDate`     | DateTime | Início das submissões                      |
-| `EndDate`       | DateTime | Prazo final                                |
-| `DaysRemaining` | int      | Dias restantes (calculado automaticamente) |
-| `IsActive`      | bool     | Desafio aberto para submissões             |
-| `CreatedById`   | int      | Usuário que criou o desafio                |
+| Campo         | Tipo     | Descrição                      |
+| ------------- | -------- | ------------------------------ |
+| `Id`          | int      | Identificador único            |
+| `Title`       | string   | Título do desafio              |
+| `Description` | string   | Descrição e critérios          |
+| `Prize`       | decimal  | Prêmio oferecido (R$)          |
+| `StartDate`   | DateTime | Início das submissões          |
+| `EndDate`     | DateTime | Prazo final                    |
+| `IsActive`    | bool     | Desafio aberto para submissões |
+| `CreatedAt`   | DateTime | Data de criação                |
+| `CreatedById` | int      | Usuário que criou o desafio    |
 
 ### `StrategicGuideline` — Diretriz Estratégica
 
@@ -213,8 +219,8 @@ A aplicação segue o padrão **Controller → Service → EF Core**, com separa
 | `Id`         | int      | Identificador único           |
 | `Method`     | string   | Método HTTP (GET, POST...)    |
 | `Endpoint`   | string   | Rota acessada                 |
-| `UserEmail`  | string   | E-mail do usuário autenticado |
-| `UserRole`   | string   | Role do usuário no momento    |
+| `UserEmail`  | string?  | E-mail do usuário autenticado |
+| `UserRole`   | string?  | Role do usuário no momento    |
 | `StatusCode` | int      | Código de resposta HTTP       |
 | `DurationMs` | long     | Tempo de execução em ms       |
 | `CreatedAt`  | DateTime | Momento do acesso             |
