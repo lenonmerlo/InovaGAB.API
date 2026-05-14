@@ -1,4 +1,21 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: inovagab-db
+    environment:
+      POSTGRES_DB: inovagab
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - inovagab_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -9,7 +26,13 @@ services:
       - "8081:8081"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=${DB_CONNECTION}
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=inovagab;Username=postgres;Password=${DB_PASSWORD}
       - Jwt__Key=${JWT_KEY}
-      - Jwt__Issuer=${JWT_ISSUER:-InovaGAB.API}
-      - Jwt__Audience=${JWT_AUDIENCE:-InovaGAB.App}
+      - Jwt__Issuer=InovaGAB.API
+      - Jwt__Audience=InovaGAB.App
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  inovagab_data:

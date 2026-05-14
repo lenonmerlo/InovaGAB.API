@@ -4,7 +4,7 @@
 
 ![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?style=flat&logo=dotnet&logoColor=white)
 ![C#](https://img.shields.io/badge/C%23-12.0-239120?style=flat&logo=csharp&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-4169E1?style=flat&logo=postgresql&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Docker-4169E1?style=flat&logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat&logo=docker&logoColor=white)
 ![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat&logo=swagger&logoColor=black)
 ![JWT](https://img.shields.io/badge/Auth-JWT-000000?style=flat&logo=jsonwebtokens&logoColor=white)
@@ -42,7 +42,7 @@ API RESTful desenvolvida como solução para o desafio proposto pela FIAP, com f
 
 ## Para Avaliadores
 
-O banco de dados está hospedado no **Supabase (PostgreSQL em nuvem)** — região São Paulo.
+O banco de dados **PostgreSQL** é executado localmente via container Docker.
 As credenciais de acesso não são versionadas por segurança.
 
 **Forma mais rápida de rodar:**
@@ -52,7 +52,7 @@ As credenciais de acesso não são versionadas por segurança.
 git clone https://github.com/lenonmerlo/InovaGAB.API.git
 cd InovaGAB.API
 
-# 2. Copie o arquivo de exemplo e preencha com as credenciais
+# 2. Copie o arquivo de exemplo e preencha com as credenciais (solicitar ao autor)
 cp .env.example .env
 
 # 3. Suba a aplicação
@@ -61,12 +61,10 @@ docker-compose up --build
 
 Acesse o Swagger em: **http://localhost:8080/swagger**
 
-| Variável | Descrição |
-|---|---|
-| `DB_CONNECTION` | String de conexão Supabase (solicitar ao autor) |
-| `JWT_KEY` | Chave secreta JWT (solicitar ao autor) |
-| `JWT_ISSUER` | `InovaGAB.API` |
-| `JWT_AUDIENCE` | `InovaGAB.App` |
+| Variável      | Descrição                                      |
+| ------------- | ---------------------------------------------- |
+| `DB_PASSWORD` | Senha do PostgreSQL local (solicitar ao autor) |
+| `JWT_KEY`     | Chave secreta JWT (solicitar ao autor)         |
 
 **Contato:** lenontm@gmail.com
 
@@ -117,130 +115,138 @@ A aplicação segue o padrão **Controller → Service → EF Core**, com separa
 
 ## Tecnologias
 
-| Tecnologia | Versão | Função |
-|---|---|---|
-| **.NET** | 9.0 | Plataforma base |
-| **ASP.NET Core** | 9.0 | Framework Web / API |
-| **Entity Framework Core** | 9.0.4 | ORM / acesso a dados |
-| **Npgsql (EF Core)** | 9.0.4 | Provider PostgreSQL |
-| **PostgreSQL / Supabase** | — | Banco de dados em nuvem |
-| **JWT Bearer** | 9.0.4 | Autenticação via token |
-| **BCrypt.Net-Next** | 4.1.0 | Hash seguro de senhas |
-| **Swashbuckle (Swagger)** | 6.9.0 | Documentação interativa da API |
-| **Docker** | — | Containerização (Linux) |
+| Tecnologia                | Versão | Função                          |
+| ------------------------- | ------ | ------------------------------- |
+| **.NET**                  | 9.0    | Plataforma base                 |
+| **ASP.NET Core**          | 9.0    | Framework Web / API             |
+| **Entity Framework Core** | 9.0.4  | ORM / acesso a dados            |
+| **Npgsql (EF Core)**      | 9.0.4  | Provider PostgreSQL             |
+| **PostgreSQL**            | —      | Banco de dados local via Docker |
+| **JWT Bearer**            | 9.0.4  | Autenticação via token          |
+| **BCrypt.Net-Next**       | 4.1.0  | Hash seguro de senhas           |
+| **Swashbuckle (Swagger)** | 6.9.0  | Documentação interativa da API  |
+| **Docker**                | —      | Containerização (Linux)         |
 
 ---
 
 ## Modelos de Domínio
 
 ### `User` — Usuário
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `Id` | int | Identificador único |
-| `Name` | string | Nome completo |
-| `Email` | string | E-mail (usado no login) |
-| `PasswordHash` | string | Senha hasheada com BCrypt |
-| `Role` | UserRole | Perfil: `Operator`, `Manager`, `Leader` |
-| `Division` | string | Divisão/área da empresa |
-| `Points` | int | Pontuação acumulada por contribuições |
-| `CreatedAt` | DateTime | Data de criação |
+
+| Campo          | Tipo     | Descrição                               |
+| -------------- | -------- | --------------------------------------- |
+| `Id`           | int      | Identificador único                     |
+| `Name`         | string   | Nome completo                           |
+| `Email`        | string   | E-mail (usado no login)                 |
+| `PasswordHash` | string   | Senha hasheada com BCrypt               |
+| `Role`         | UserRole | Perfil: `Operator`, `Manager`, `Leader` |
+| `Division`     | string   | Divisão/área da empresa                 |
+| `Points`       | int      | Pontuação acumulada por contribuições   |
+| `CreatedAt`    | DateTime | Data de criação                         |
 
 ### `Idea` — Ideia
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `Id` | int | Identificador único |
-| `Title` | string | Título da ideia |
-| `Description` | string | Descrição detalhada |
-| `Division` | string | Divisão de origem |
-| `Status` | IdeaStatus | `Submitted`, `UnderReview`, `Approved`, `Rejected` |
-| `ImpactScore` | int | Nota de impacto (0–10) |
-| `FeasibilityScore` | int | Nota de viabilidade (0–10) |
-| `AlignmentScore` | int | Nota de alinhamento estratégico (0–10) |
-| `TotalScore` | int | Média calculada automaticamente |
-| `EvidenceUrl` | string? | URL de evidência/anexo |
-| `ChallengeId` | int? | Desafio vinculado (opcional) |
-| `UserId` | int | Autor da ideia |
+
+| Campo              | Tipo       | Descrição                                          |
+| ------------------ | ---------- | -------------------------------------------------- |
+| `Id`               | int        | Identificador único                                |
+| `Title`            | string     | Título da ideia                                    |
+| `Description`      | string     | Descrição detalhada                                |
+| `Division`         | string     | Divisão de origem                                  |
+| `Status`           | IdeaStatus | `Submitted`, `UnderReview`, `Approved`, `Rejected` |
+| `ImpactScore`      | int        | Nota de impacto (0–10)                             |
+| `FeasibilityScore` | int        | Nota de viabilidade (0–10)                         |
+| `AlignmentScore`   | int        | Nota de alinhamento estratégico (0–10)             |
+| `TotalScore`       | int        | Média calculada automaticamente                    |
+| `EvidenceUrl`      | string?    | URL de evidência/anexo                             |
+| `ChallengeId`      | int?       | Desafio vinculado (opcional)                       |
+| `UserId`           | int        | Autor da ideia                                     |
 
 ### `Project` — Projeto
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `Id` | int | Identificador único |
-| `Title` | string | Título do projeto |
-| `Division` | string | Divisão responsável |
-| `Status` | ProjectStatus | `Planning`, `InProgress`, `Completed`, `OnHold`, `Cancelled` |
-| `Stage` | ProjectStage | `Diagnosis`, `Implementation`, `Validation`, `Closure` |
-| `Investment` | decimal | Investimento total (R$) |
-| `FinancialReturn` | decimal | Retorno financeiro (R$) |
-| `Roi` | decimal | ROI calculado automaticamente (%) |
-| `ProductivityGain` | int | Ganho de produtividade (%) |
-| `ProgressPercent` | int | Progresso geral (0–100) |
-| `Deadline` | DateTime | Prazo de entrega |
-| `ManagerId` | int | Gestor responsável |
-| `IdeaId` | int? | Ideia de origem |
+
+| Campo              | Tipo          | Descrição                                                    |
+| ------------------ | ------------- | ------------------------------------------------------------ |
+| `Id`               | int           | Identificador único                                          |
+| `Title`            | string        | Título do projeto                                            |
+| `Division`         | string        | Divisão responsável                                          |
+| `Status`           | ProjectStatus | `Planning`, `InProgress`, `Completed`, `OnHold`, `Cancelled` |
+| `Stage`            | ProjectStage  | `Diagnosis`, `Implementation`, `Validation`, `Closure`       |
+| `Investment`       | decimal       | Investimento total (R$)                                      |
+| `FinancialReturn`  | decimal       | Retorno financeiro (R$)                                      |
+| `Roi`              | decimal       | ROI calculado automaticamente (%)                            |
+| `ProductivityGain` | int           | Ganho de produtividade (%)                                   |
+| `ProgressPercent`  | int           | Progresso geral (0–100)                                      |
+| `Deadline`         | DateTime      | Prazo de entrega                                             |
+| `ManagerId`        | int           | Gestor responsável                                           |
+| `IdeaId`           | int?          | Ideia de origem                                              |
 
 ### `Challenge` — Desafio
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `Id` | int | Identificador único |
-| `Title` | string | Título do desafio |
-| `Description` | string | Descrição e critérios |
-| `Prize` | decimal | Prêmio oferecido (R$) |
-| `StartDate` | DateTime | Início das submissões |
-| `EndDate` | DateTime | Prazo final |
-| `DaysRemaining` | int | Dias restantes (calculado automaticamente) |
-| `IsActive` | bool | Desafio aberto para submissões |
-| `CreatedById` | int | Usuário que criou o desafio |
+
+| Campo           | Tipo     | Descrição                                  |
+| --------------- | -------- | ------------------------------------------ |
+| `Id`            | int      | Identificador único                        |
+| `Title`         | string   | Título do desafio                          |
+| `Description`   | string   | Descrição e critérios                      |
+| `Prize`         | decimal  | Prêmio oferecido (R$)                      |
+| `StartDate`     | DateTime | Início das submissões                      |
+| `EndDate`       | DateTime | Prazo final                                |
+| `DaysRemaining` | int      | Dias restantes (calculado automaticamente) |
+| `IsActive`      | bool     | Desafio aberto para submissões             |
+| `CreatedById`   | int      | Usuário que criou o desafio                |
 
 ### `StrategicGuideline` — Diretriz Estratégica
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `Id` | int | Identificador único |
-| `Title` | string | Título da diretriz |
-| `Description` | string | Detalhamento |
-| `Priority` | GuidelinePriority | `Low`, `Medium`, `High` |
-| `Category` | string | Categoria temática |
-| `IsActive` | bool | Ativo (soft delete) |
-| `CreatedById` | int | Usuário responsável |
+
+| Campo         | Tipo              | Descrição               |
+| ------------- | ----------------- | ----------------------- |
+| `Id`          | int               | Identificador único     |
+| `Title`       | string            | Título da diretriz      |
+| `Description` | string            | Detalhamento            |
+| `Priority`    | GuidelinePriority | `Low`, `Medium`, `High` |
+| `Category`    | string            | Categoria temática      |
+| `IsActive`    | bool              | Ativo (soft delete)     |
+| `CreatedById` | int               | Usuário responsável     |
 
 ### `AuditLog` — Log de Auditoria
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `Id` | int | Identificador único |
-| `Method` | string | Método HTTP (GET, POST...) |
-| `Endpoint` | string | Rota acessada |
-| `UserEmail` | string | E-mail do usuário autenticado |
-| `UserRole` | string | Role do usuário no momento |
-| `StatusCode` | int | Código de resposta HTTP |
-| `DurationMs` | long | Tempo de execução em ms |
-| `CreatedAt` | DateTime | Momento do acesso |
+
+| Campo        | Tipo     | Descrição                     |
+| ------------ | -------- | ----------------------------- |
+| `Id`         | int      | Identificador único           |
+| `Method`     | string   | Método HTTP (GET, POST...)    |
+| `Endpoint`   | string   | Rota acessada                 |
+| `UserEmail`  | string   | E-mail do usuário autenticado |
+| `UserRole`   | string   | Role do usuário no momento    |
+| `StatusCode` | int      | Código de resposta HTTP       |
+| `DurationMs` | long     | Tempo de execução em ms       |
+| `CreatedAt`  | DateTime | Momento do acesso             |
 
 ---
 
 ## Perfis de Usuário (Roles)
 
-| Role | Nome | Permissões |
-|---|---|---|
-| `Operator` | Operador | Submeter ideias, visualizar próprias ideias, ver diretrizes e desafios |
-| `Manager` | Gestor | Aprovar/rejeitar ideias, criar e gerenciar projetos, ver todas as ideias |
-| `Leader` | Liderança | Dashboard executivo, CRUD de diretrizes e desafios, visão total de projetos |
+| Role       | Nome      | Permissões                                                                  |
+| ---------- | --------- | --------------------------------------------------------------------------- |
+| `Operator` | Operador  | Submeter ideias, visualizar próprias ideias, ver diretrizes e desafios      |
+| `Manager`  | Gestor    | Aprovar/rejeitar ideias, criar e gerenciar projetos, ver todas as ideias    |
+| `Leader`   | Liderança | Dashboard executivo, CRUD de diretrizes e desafios, visão total de projetos |
 
 ---
 
 ## Endpoints da API
 
 > Todos os endpoints (exceto `/api/Auth/register` e `/api/Auth/login`) requerem o header:
+>
 > ```
 > Authorization: Bearer {seu_token_jwt}
 > ```
 
 ### Auth
 
-| Método | Rota | Acesso | Descrição |
-|---|---|---|---|
-| `POST` | `/api/Auth/register` | Público | Cadastro de novo usuário |
-| `POST` | `/api/Auth/login` | Público | Login e geração do token JWT |
+| Método | Rota                 | Acesso  | Descrição                    |
+| ------ | -------------------- | ------- | ---------------------------- |
+| `POST` | `/api/Auth/register` | Público | Cadastro de novo usuário     |
+| `POST` | `/api/Auth/login`    | Público | Login e geração do token JWT |
 
 #### `POST /api/Auth/register`
+
 ```json
 {
   "name": "João Silva",
@@ -250,16 +256,20 @@ A aplicação segue o padrão **Controller → Service → EF Core**, com separa
   "division": "Tecnologia"
 }
 ```
+
 > `role`: `"0"` = Operator, `"1"` = Manager, `"2"` = Leader
 
 #### `POST /api/Auth/login`
+
 ```json
 {
   "email": "joao@empresa.com",
   "password": "Senha@123"
 }
 ```
+
 **Resposta:**
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -274,15 +284,16 @@ A aplicação segue o padrão **Controller → Service → EF Core**, com separa
 
 ### Ideias
 
-| Método | Rota | Role | Descrição |
-|---|---|---|---|
-| `POST` | `/api/Idea` | Operator | Submeter nova ideia |
-| `GET` | `/api/Idea/my` | Operator | Listar próprias ideias |
-| `GET` | `/api/Idea` | Manager, Leader | Listar todas as ideias ordenadas por score |
-| `PATCH` | `/api/Idea/{id}/approve` | Manager | Aprovar ideia com scores de impacto |
-| `PATCH` | `/api/Idea/{id}/reject` | Manager | Rejeitar ideia |
+| Método  | Rota                     | Role            | Descrição                                  |
+| ------- | ------------------------ | --------------- | ------------------------------------------ |
+| `POST`  | `/api/Idea`              | Operator        | Submeter nova ideia                        |
+| `GET`   | `/api/Idea/my`           | Operator        | Listar próprias ideias                     |
+| `GET`   | `/api/Idea`              | Manager, Leader | Listar todas as ideias ordenadas por score |
+| `PATCH` | `/api/Idea/{id}/approve` | Manager         | Aprovar ideia com scores de impacto        |
+| `PATCH` | `/api/Idea/{id}/reject`  | Manager         | Rejeitar ideia                             |
 
 #### `POST /api/Idea`
+
 ```json
 {
   "title": "Automação do processo X",
@@ -294,6 +305,7 @@ A aplicação segue o padrão **Controller → Service → EF Core**, com separa
 ```
 
 #### `PATCH /api/Idea/{id}/approve`
+
 ```json
 {
   "impactScore": 8,
@@ -306,20 +318,21 @@ A aplicação segue o padrão **Controller → Service → EF Core**, com separa
 
 ### Projetos
 
-| Método | Rota | Role | Descrição |
-|---|---|---|---|
-| `POST` | `/api/Project` | Manager | Criar projeto |
-| `GET` | `/api/Project` | Manager, Leader | Listar todos os projetos |
-| `GET` | `/api/Project/{id}` | Manager, Leader | Detalhar um projeto |
-| `PUT` | `/api/Project/{id}` | Manager | Atualizar dados do projeto |
+| Método | Rota                | Role            | Descrição                  |
+| ------ | ------------------- | --------------- | -------------------------- |
+| `POST` | `/api/Project`      | Manager         | Criar projeto              |
+| `GET`  | `/api/Project`      | Manager, Leader | Listar todos os projetos   |
+| `GET`  | `/api/Project/{id}` | Manager, Leader | Detalhar um projeto        |
+| `PUT`  | `/api/Project/{id}` | Manager         | Atualizar dados do projeto |
 
 #### `POST /api/Project`
+
 ```json
 {
   "title": "Projeto RPA Operações",
   "description": "Automação de processos manuais",
   "division": "Operações",
-  "investment": 50000.00,
+  "investment": 50000.0,
   "startDate": "2026-06-01T00:00:00Z",
   "deadline": "2026-09-01T00:00:00Z",
   "ideaId": 12
@@ -327,15 +340,17 @@ A aplicação segue o padrão **Controller → Service → EF Core**, com separa
 ```
 
 #### `PUT /api/Project/{id}`
+
 ```json
 {
   "status": 1,
   "stage": 1,
   "progressPercent": 65,
-  "financialReturn": 150000.00,
+  "financialReturn": 150000.0,
   "productivityGain": 30
 }
 ```
+
 > `status`: `0`=Planning, `1`=InProgress, `2`=Completed, `3`=OnHold, `4`=Cancelled
 > `stage`: `0`=Diagnosis, `1`=Implementation, `2`=Validation, `3`=Closure
 
@@ -343,19 +358,20 @@ A aplicação segue o padrão **Controller → Service → EF Core**, com separa
 
 ### Desafios
 
-| Método | Rota | Role | Descrição |
-|---|---|---|---|
-| `POST` | `/api/Challenge` | Leader | Criar novo desafio |
-| `GET` | `/api/Challenge` | Todos | Listar desafios ativos |
-| `GET` | `/api/Challenge/{id}` | Todos | Detalhar desafio e suas ideias |
-| `PUT` | `/api/Challenge/{id}` | Leader | Atualizar desafio |
+| Método | Rota                  | Role   | Descrição                      |
+| ------ | --------------------- | ------ | ------------------------------ |
+| `POST` | `/api/Challenge`      | Leader | Criar novo desafio             |
+| `GET`  | `/api/Challenge`      | Todos  | Listar desafios ativos         |
+| `GET`  | `/api/Challenge/{id}` | Todos  | Detalhar desafio e suas ideias |
+| `PUT`  | `/api/Challenge/{id}` | Leader | Atualizar desafio              |
 
 #### `POST /api/Challenge`
+
 ```json
 {
   "title": "Sustentabilidade 2026",
   "description": "Ideias para redução de emissão de carbono",
-  "prize": 5000.00,
+  "prize": 5000.0,
   "startDate": "2026-06-01T00:00:00Z",
   "endDate": "2026-08-31T23:59:59Z"
 }
@@ -365,15 +381,16 @@ A aplicação segue o padrão **Controller → Service → EF Core**, com separa
 
 ### Diretrizes Estratégicas
 
-| Método | Rota | Role | Descrição |
-|---|---|---|---|
-| `POST` | `/api/Guideline` | Leader | Criar diretriz |
-| `GET` | `/api/Guideline` | Todos | Listar diretrizes ativas |
-| `GET` | `/api/Guideline/{id}` | Todos | Detalhar diretriz |
-| `PUT` | `/api/Guideline/{id}` | Leader | Atualizar diretriz |
+| Método   | Rota                  | Role   | Descrição                      |
+| -------- | --------------------- | ------ | ------------------------------ |
+| `POST`   | `/api/Guideline`      | Leader | Criar diretriz                 |
+| `GET`    | `/api/Guideline`      | Todos  | Listar diretrizes ativas       |
+| `GET`    | `/api/Guideline/{id}` | Todos  | Detalhar diretriz              |
+| `PUT`    | `/api/Guideline/{id}` | Leader | Atualizar diretriz             |
 | `DELETE` | `/api/Guideline/{id}` | Leader | Remover diretriz (soft delete) |
 
 #### `POST /api/Guideline`
+
 ```json
 {
   "title": "Transformação Digital",
@@ -382,17 +399,19 @@ A aplicação segue o padrão **Controller → Service → EF Core**, com separa
   "category": "Tecnologia"
 }
 ```
+
 > `priority`: `"Low"`, `"Medium"`, `"High"`
 
 ---
 
 ### Dashboard
 
-| Método | Rota | Role | Descrição |
-|---|---|---|---|
-| `GET` | `/api/Dashboard` | Leader | Métricas executivas consolidadas |
+| Método | Rota             | Role   | Descrição                        |
+| ------ | ---------------- | ------ | -------------------------------- |
+| `GET`  | `/api/Dashboard` | Leader | Métricas executivas consolidadas |
 
 **Resposta:**
+
 ```json
 {
   "totalRoi": 320000.00,
@@ -424,6 +443,7 @@ A API utiliza **JWT (JSON Web Token)** com as seguintes configurações:
 - Senhas armazenadas com **BCrypt**
 
 Para autenticar no Swagger:
+
 1. Faça login em `POST /api/Auth/login`
 2. Copie o `token` retornado
 3. Clique em **Authorize** (canto superior direito do Swagger UI)
@@ -437,7 +457,6 @@ Para autenticar no Swagger:
 
 - [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 - [Docker](https://www.docker.com/)
-- Conta no [Supabase](https://supabase.com/) *(ou PostgreSQL local)*
 
 ### Variáveis de ambiente
 
@@ -447,20 +466,22 @@ Copie o arquivo de exemplo e preencha com suas credenciais:
 cp .env.example .env
 ```
 
-| Variável | Descrição |
-|---|---|
-| `DB_CONNECTION` | String de conexão PostgreSQL/Supabase |
-| `JWT_KEY` | Chave secreta JWT (mín. 32 caracteres) |
-| `JWT_ISSUER` | Emissor do token (padrão: `InovaGAB.API`) |
-| `JWT_AUDIENCE` | Audiência do token (padrão: `InovaGAB.App`) |
+| Variável      | Descrição                                      |
+| ------------- | ---------------------------------------------- |
+| `DB_PASSWORD` | Senha do PostgreSQL local (solicitar ao autor) |
+| `JWT_KEY`     | Chave secreta JWT (solicitar ao autor)         |
 
 ---
 
 ## Executando a Aplicação
 
-### Com Docker Compose *(recomendado)*
+### Com Docker Compose _(recomendado)_
 
 ```bash
+# Copie o arquivo de exemplo e preencha com suas credenciais
+cp .env.example .env
+
+# Suba a aplicação (banco PostgreSQL + API)
 docker-compose up --build
 ```
 
@@ -488,6 +509,8 @@ dotnet run --project InovaGAB.API
 
 O projeto utiliza **EF Core Migrations** com aplicação automática no startup.
 
+> O banco de dados PostgreSQL é criado automaticamente via container Docker. Não é necessário instalar ou configurar PostgreSQL localmente.
+
 ### Comandos úteis
 
 ```bash
@@ -503,14 +526,15 @@ dotnet ef migrations list --project InovaGAB.API
 
 ### Tabelas do banco
 
-| Tabela | Descrição |
-|---|---|
-| `Users` | Usuários do sistema |
-| `Ideas` | Ideias submetidas |
-| `Projects` | Projetos criados a partir de ideias |
-| `Challenges` | Desafios de inovação |
-| `StrategicGuidelines` | Diretrizes estratégicas |
-| `AuditLogs` | Registro de auditoria das requisições |
+| Tabela                  | Descrição                                 |
+| ----------------------- | ----------------------------------------- |
+| `Users`                 | Usuários do sistema                       |
+| `Ideas`                 | Ideias submetidas                         |
+| `Projects`              | Projetos criados a partir de ideias       |
+| `Challenges`            | Desafios de inovação                      |
+| `StrategicGuidelines`   | Diretrizes estratégicas                   |
+| `AuditLogs`             | Registro de auditoria das requisições     |
+| `__EFMigrationsHistory` | Controle interno de migrations do EF Core |
 
 ---
 
@@ -595,10 +619,10 @@ InovaGAB.API/
 
 Projeto desenvolvido para o **Challenge FIAP 2025 — Grupo Águia Branca**.
 
-| Membro | RM |
-|---|---|
-| Guilherme Luccas da Costa | RM561735 |
-| Lenon Otmar Tonoli Merlo | RM564471 |
+| Membro                       | RM       |
+| ---------------------------- | -------- |
+| Guilherme Luccas da Costa    | RM561735 |
+| Lenon Otmar Tonoli Merlo     | RM564471 |
 | Matheus Henrique Silva Souza | RM561329 |
 
 ---
