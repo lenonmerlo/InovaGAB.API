@@ -11,6 +11,17 @@ namespace InovaGAB.API.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql(@"
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'StrategicGuidelines'
+                AND column_name = 'CreatedById'
+            ) AND NOT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'StrategicGuidelines'
+                AND column_name = 'CreatedByUserId'
+            ) THEN
                 ALTER TABLE ""StrategicGuidelines""
                     DROP CONSTRAINT IF EXISTS ""FK_StrategicGuidelines_Users_CreatedById"";
 
@@ -20,7 +31,9 @@ namespace InovaGAB.API.Migrations
                 ALTER TABLE ""StrategicGuidelines""
                     ADD CONSTRAINT ""FK_StrategicGuidelines_Users_CreatedByUserId""
                     FOREIGN KEY (""CreatedByUserId"") REFERENCES ""Users""(""Id"") ON DELETE CASCADE;
-            ");
+            END IF;
+        END $$;
+    ");
         }
 
         /// <inheritdoc />

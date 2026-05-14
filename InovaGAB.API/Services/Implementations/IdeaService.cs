@@ -54,10 +54,9 @@ public class IdeaService : IIdeaService
     {
         var ideas = await _context.Ideas
             .Include(i => i.User)
-            .OrderByDescending(i => i.TotalScore)
             .ToListAsync();
 
-        return ideas.Select(MapToResponse).ToList();
+        return ideas.OrderByDescending(i => i.TotalScore).Select(MapToResponse).ToList();
     }
 
     public async Task<IdeaResponse?> ApproveAsync(int ideaId, int impactScore, int feasibilityScore, int alignmentScore)
