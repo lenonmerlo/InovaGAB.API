@@ -1,11 +1,14 @@
+using InovaGAB.API.Configuration;
 using InovaGAB.API.Data;
 using InovaGAB.API.Middleware;
 using InovaGAB.API.Services.Implementations;
 using InovaGAB.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using MongoDB.Driver;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +19,38 @@ builder.Services.AddControllers();
 // ── PostgreSQL + EF Core
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// -- MongoDB em paralelo durante a migração
+builder.Services
+    .AddOptions<MongoDbSettings>()
+    .Bind(builder.Configuration.GetSection(MongoDbSettings.SectionName))
+    .Validate(
+        settings => !string.IsNullOrWhiteSpace(settings.ConnectionString),
+        "MongoDb:ConnectionString é obrigatória.")
+    .Validate(
+        settings => !string.IsNullOrWhiteSpace(settings.DatabaseName),
+        "MongoDb:DatabaseName é obrigatório.")
+    .ValidateOnStart();
+
+builder.Services.AddSingleton<IMongoClient>(serviceProvider =>
+{
+    var settings = serviceProvider
+        .GetRequiredService<IOptions<MongoDbSettings>>()
+        .Value;
+
+    return new MongoClient(settings.ConnectionString);
+});
+
+builder.Services.AddSingleton<IMongoDatabase>(serviceProvider =>
+{
+    var settings = serviceProvider
+        .GetRequiredService<IOptions<MongoDbSettings>>()
+        .Value;
+
+    var client = serviceProvider.GetRequiredService<IMongoClient>();
+
+    return client.GetDatabase(settings.DatabaseName);
+});
 
 // ── JWT
 var jwtKey = builder.Configuration["Jwt:Key"]!;
