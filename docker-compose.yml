@@ -16,6 +16,20 @@ services:
       timeout: 5s
       retries: 5
 
+  mongo:
+    image: mongo:8
+    container_name: inovagab-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - inovagab_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -27,12 +41,17 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=inovagab;Username=postgres;Password=${DB_PASSWORD}
+      - MongoDb__ConnectionString=mongodb://mongo:27017
+      - MongoDb__DatabaseName=InovaGab
       - Jwt__Key=${JWT_KEY}
       - Jwt__Issuer=InovaGAB.API
       - Jwt__Audience=InovaGAB.App
     depends_on:
       db:
         condition: service_healthy
+      mongo:
+        condition: service_healthy
 
 volumes:
   inovagab_data:
+  inovagab_mongo_data:
