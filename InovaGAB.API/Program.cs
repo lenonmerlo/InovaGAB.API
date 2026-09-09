@@ -13,6 +13,8 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+MongoDbConventions.Register();
+
 // ── Controllers
 builder.Services.AddControllers();
 
