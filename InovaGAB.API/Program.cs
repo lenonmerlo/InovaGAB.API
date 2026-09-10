@@ -159,12 +159,13 @@ builder.Services.AddScoped<
 
 var app = builder.Build();
 
-// ── Dados iniciais do MongoDB
+// ── Inicialização do MongoDB
 using (var scope = app.Services.CreateScope())
 {
     var mongoDbContext = scope.ServiceProvider
         .GetRequiredService<MongoDbContext>();
 
+    await MongoDbIndexes.CreateAsync(mongoDbContext);
     await DataSeeder.SeedAsync(mongoDbContext);
 }
 
