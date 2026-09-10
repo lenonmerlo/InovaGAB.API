@@ -5,10 +5,12 @@ namespace InovaGAB.API.Services.Interfaces
 {
     public interface IGuidelineService
     {
-        Task<GuidelineResponse> CreateAsync(CreateGuidelineRequest request, int userId);
+        Task<GuidelineResponse> CreateAsync(
+            CreateGuidelineRequest request,
+            string userId);
         Task<List<GuidelineResponse>> GetAllAsync();
-        Task<GuidelineResponse?> GetByIdAsync(int id);
-        Task<GuidelineResponse?> UpdateAsync(int id, CreateGuidelineRequest request);
-        Task<bool> DeleteAsync(int id);
+        Task<GuidelineResponse?> GetByIdAsync(string id);
+        Task<GuidelineResponse?> UpdateAsync(string id, CreateGuidelineRequest request);
+        Task<bool> DeleteAsync(string id);
     }
 }

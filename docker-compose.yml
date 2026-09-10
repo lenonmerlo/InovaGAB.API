@@ -1,17 +1,14 @@
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: inovagab-db
-    environment:
-      POSTGRES_DB: inovagab
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+  mongo:
+    image: mongo:8
+    container_name: inovagab-mongo
+    restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "27017:27017"
     volumes:
-      - inovagab_data:/var/lib/postgresql/data
+      - inovagab_mongo_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,13 +23,14 @@ services:
       - "8081:8081"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=inovagab;Username=postgres;Password=${DB_PASSWORD}
+      - MongoDb__ConnectionString=mongodb://mongo:27017
+      - MongoDb__DatabaseName=InovaGab
       - Jwt__Key=${JWT_KEY}
       - Jwt__Issuer=InovaGAB.API
       - Jwt__Audience=InovaGAB.App
     depends_on:
-      db:
+      mongo:
         condition: service_healthy
 
 volumes:
-  inovagab_data:
+  inovagab_mongo_data:

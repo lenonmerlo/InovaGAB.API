@@ -5,10 +5,20 @@ namespace InovaGAB.API.Services.Interfaces
 {
     public interface IIdeaService
     {
-        Task<IdeaResponse> CreateAsync(CreateIdeaRequest request, int userId);
-        Task<List<IdeaResponse>> GetMyIdeasAsync(int userId);
+        Task<IdeaResponse> CreateAsync(
+            CreateIdeaRequest request,
+            string userId);
+
+        Task<List<IdeaResponse>> GetMyIdeasAsync(string userId);
+
         Task<List<IdeaResponse>> GetAllAsync();
-        Task<IdeaResponse?> ApproveAsync(int ideaId, int impactScore, int feasibilityScore, int alignmentScore);
-        Task<IdeaResponse?> RejectAsync(int ideaId);
+
+        Task<IdeaResponse?> ApproveAsync(
+            string ideaId,
+            int impactScore,
+            int feasibilityScore,
+            int alignmentScore);
+
+        Task<IdeaResponse?> RejectAsync(string ideaId);
     }
 }

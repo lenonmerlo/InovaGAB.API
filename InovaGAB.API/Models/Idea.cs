@@ -1,28 +1,52 @@
-﻿namespace InovaGAB.API.Models
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
+namespace InovaGAB.API.Models
 {
     public class Idea
     {
-        public int Id { get; set; }
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
+
         public string Title { get; set; } = string.Empty;
+
         public string Description { get; set; } = string.Empty;
+
         public string Division { get; set; } = string.Empty;
+
         public IdeaStatus Status { get; set; } = IdeaStatus.Submitted;
+
         public int ImpactScore { get; set; } = 0;
+
         public int FeasibilityScore { get; set; } = 0;
+
         public int AlignmentScore { get; set; } = 0;
-        public int TotalScore => (ImpactScore + FeasibilityScore + AlignmentScore) / 3;
+
+        [BsonIgnore]
+        public int TotalScore =>
+            (ImpactScore + FeasibilityScore + AlignmentScore) / 3;
+
         public string? EvidenceUrl { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-        public int UserId { get; set; }
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string UserId { get; set; } = string.Empty;
+
+        [BsonIgnore]
         public User User { get; set; } = null!;
 
-        public int? ChallengeId { get; set; }
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? ChallengeId { get; set; }
+
+        [BsonIgnore]
         public Challenge? Challenge { get; set; }
     }
 
-    public enum  IdeaStatus
+    public enum IdeaStatus
     {
         Submitted,
         UnderReview,
