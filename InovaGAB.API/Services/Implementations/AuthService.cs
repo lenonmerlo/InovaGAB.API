@@ -1,13 +1,13 @@
-﻿using InovaGAB.API.Data;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using InovaGAB.API.Data;
 using InovaGAB.API.DTOs.Request;
 using InovaGAB.API.DTOs.Response;
 using InovaGAB.API.Models;
 using InovaGAB.API.Services.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace InovaGAB.API.Services.Implementations;
 
@@ -27,8 +27,12 @@ public class AuthService : IAuthService
     public async Task<AuthResponse?> LoginAsync(
         LoginRequest request)
     {
+        var normalizedEmail = request.Email
+            .Trim()
+            .ToLowerInvariant();
+
         var user = await _context.Users
-            .Find(user => user.Email == request.Email)
+            .Find(user => user.Email == normalizedEmail)
             .FirstOrDefaultAsync();
 
         if (user == null ||
@@ -47,8 +51,12 @@ public class AuthService : IAuthService
     public async Task<AuthResponse> RegisterAsync(
         RegisterRequest request)
     {
+        var normalizedEmail = request.Email
+            .Trim()
+            .ToLowerInvariant();
+
         var existingUser = await _context.Users
-            .Find(user => user.Email == request.Email)
+            .Find(user => user.Email == normalizedEmail)
             .AnyAsync();
 
         if (existingUser)
@@ -57,23 +65,15 @@ public class AuthService : IAuthService
                 "Já existe um usuário cadastrado com este e-mail.");
         }
 
-        if (!Enum.TryParse<UserRole>(
-                request.Role,
-                ignoreCase: true,
-                out var role))
-        {
-            throw new ArgumentException(
-                "Perfil de usuário inválido.");
-        }
-
         var user = new User
         {
-            Name = request.Name,
-            Email = request.Email,
+            Name = request.Name.Trim(),
+            Email = normalizedEmail,
             PasswordHash =
-                BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = role,
-            Division = request.Division,
+                BCrypt.Net.BCrypt.HashPassword(
+                    request.Password),
+            Role = UserRole.Operator,
+            Division = request.Division.Trim(),
             Points = 0,
             CreatedAt = DateTime.UtcNow
         };
@@ -85,7 +85,7 @@ public class AuthService : IAuthService
         return MapToResponse(user, token);
     }
 
-    private AuthResponse MapToResponse(
+    private static AuthResponse MapToResponse(
         User user,
         string token)
     {
