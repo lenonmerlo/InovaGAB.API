@@ -1,0 +1,461 @@
+{
+  "info": {
+    "_postman_id": "16b61df7-b4fb-4b31-b0a0-inovagabmongo",
+    "name": "InovaGAB API - Regressao MongoDB",
+    "description": "Execute a collection inteira na ordem. Tokens e IDs sao armazenados automaticamente nas variaveis da collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "operatorToken", "value": "" },
+    { "key": "managerToken", "value": "" },
+    { "key": "leaderToken", "value": "" },
+    { "key": "ideaId", "value": "" },
+    { "key": "projectId", "value": "" },
+    { "key": "guidelineId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "00 - Infraestrutura",
+      "item": [
+        {
+          "name": "Health Mongo - 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/health/mongo"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Mongo saudavel', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.expect(body.status).to.eql('healthy');",
+                "pm.expect(body.mongoPing).to.eql(1);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Sem token consulta diretrizes - 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/Guideline"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["pm.test('Sem token retorna 401', () => pm.response.to.have.status(401));"]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "01 - Operador",
+      "item": [
+        {
+          "name": "Login operador - salva token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"joao.operador@aguiabranca.com.br\",\n  \"password\": \"senha123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Auth/login"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Login operador retorna 200', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.expect(body.role).to.eql('Operator');",
+                "pm.collectionVariables.set('operatorToken', body.token);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Operador consulta suas ideias - 200",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{operatorToken}}" }],
+            "url": "{{baseUrl}}/api/Idea/my"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Operador consulta ideias', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Operador consulta diretrizes - 200",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{operatorToken}}" }],
+            "url": "{{baseUrl}}/api/Guideline"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Operador consulta diretrizes', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Operador consulta desafios - 200",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{operatorToken}}" }],
+            "url": "{{baseUrl}}/api/Challenge"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Operador consulta desafios', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Operador cria ideia - salva ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{operatorToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ideia automatizada {{$timestamp}}\",\n  \"description\": \"Ideia criada pela collection de regressao do Postman.\",\n  \"division\": \"Passageiros\",\n  \"evidenceUrl\": null,\n  \"challengeId\": null\n}"
+            },
+            "url": "{{baseUrl}}/api/Idea"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Ideia criada com 201', () => pm.response.to.have.status(201));",
+                "const body = pm.response.json();",
+                "pm.expect(body.id).to.match(/^[a-f0-9]{24}$/);",
+                "pm.collectionVariables.set('ideaId', body.id);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Operador acessa dashboard - 403",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{operatorToken}}" }],
+            "url": "{{baseUrl}}/api/Dashboard"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Operador bloqueado no dashboard', () => pm.response.to.have.status(403));"] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "02 - Gestor",
+      "item": [
+        {
+          "name": "Login gestor - salva token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ana.gestora@aguiabranca.com.br\",\n  \"password\": \"senha123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Auth/login"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Login gestor retorna 200', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.expect(body.role).to.eql('Manager');",
+                "pm.collectionVariables.set('managerToken', body.token);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Gestor lista ideias - 200",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+            "url": "{{baseUrl}}/api/Idea"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Gestor lista ideias', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Gestor aprova ideia criada - 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"impactScore\": 9,\n  \"feasibilityScore\": 8,\n  \"alignmentScore\": 10\n}"
+            },
+            "url": "{{baseUrl}}/api/Idea/{{ideaId}}/approve"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Gestor aprova ideia', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().status).to.eql('Approved');"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Gestor cria projeto - salva ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Projeto automatizado {{$timestamp}}\",\n  \"description\": \"Projeto criado pela collection de regressao.\",\n  \"division\": \"Passageiros\",\n  \"investment\": 25000,\n  \"startDate\": \"2026-09-10T00:00:00Z\",\n  \"deadline\": \"2026-12-20T23:59:59Z\",\n  \"ideaId\": \"{{ideaId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Project"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Projeto criado com 201', () => pm.response.to.have.status(201));",
+                "const body = pm.response.json();",
+                "pm.expect(body.id).to.match(/^[a-f0-9]{24}$/);",
+                "pm.collectionVariables.set('projectId', body.id);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Gestor atualiza projeto - 200",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": 1,\n  \"stage\": 1,\n  \"financialReturn\": 75000,\n  \"productivityGain\": 30,\n  \"progressPercent\": 60\n}"
+            },
+            "url": "{{baseUrl}}/api/Project/{{projectId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Projeto atualizado', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.expect(body.status).to.eql('InProgress');",
+                "pm.expect(body.roi).to.eql(200);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Gestor consulta projeto - 200",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+            "url": "{{baseUrl}}/api/Project/{{projectId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Gestor consulta projeto', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Gestor acessa dashboard - 403",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+            "url": "{{baseUrl}}/api/Dashboard"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Gestor bloqueado no dashboard', () => pm.response.to.have.status(403));"] }
+          }]
+        },
+        {
+          "name": "ID de ideia invalido - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Nao deve ser criado\",\n  \"description\": \"Validacao de ObjectId.\",\n  \"division\": \"Passageiros\",\n  \"investment\": 1,\n  \"startDate\": \"2026-09-10T00:00:00Z\",\n  \"deadline\": \"2026-12-20T23:59:59Z\",\n  \"ideaId\": \"ID_INVALIDO\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Project"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('ObjectId invalido retorna 400', () => pm.response.to.have.status(400));",
+                "pm.expect(pm.response.json().title).to.eql('Identificador inválido.');"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "03 - Lider",
+      "item": [
+        {
+          "name": "Login lider - salva token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"carlos.lider@aguiabranca.com.br\",\n  \"password\": \"senha123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Auth/login"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Login lider retorna 200', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.expect(body.role).to.eql('Leader');",
+                "pm.collectionVariables.set('leaderToken', body.token);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Lider cria diretriz - salva ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{leaderToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Diretriz automatizada {{$timestamp}}\",\n  \"description\": \"Diretriz temporaria criada pela regressao.\",\n  \"category\": \"Tecnologia\",\n  \"priority\": \"High\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Guideline"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Diretriz criada com 201', () => pm.response.to.have.status(201));",
+                "const body = pm.response.json();",
+                "pm.collectionVariables.set('guidelineId', body.id);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Lider atualiza diretriz - 200",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{leaderToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Diretriz automatizada atualizada\",\n  \"description\": \"Diretriz atualizada pela regressao.\",\n  \"category\": \"Transformacao Digital\",\n  \"priority\": \"Medium\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Guideline/{{guidelineId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Diretriz atualizada', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Lider consulta projetos - 200",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{leaderToken}}" }],
+            "url": "{{baseUrl}}/api/Project"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Lider consulta projetos', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Lider acessa dashboard - 200",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{leaderToken}}" }],
+            "url": "{{baseUrl}}/api/Dashboard"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Lider acessa dashboard', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Lider tenta criar ideia - 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{leaderToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Nao deve ser criada\",\n  \"description\": \"Teste de autorizacao.\",\n  \"division\": \"Corporativo\",\n  \"evidenceUrl\": null,\n  \"challengeId\": null\n}"
+            },
+            "url": "{{baseUrl}}/api/Idea"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Lider bloqueado na criacao de ideia', () => pm.response.to.have.status(403));"] }
+          }]
+        },
+        {
+          "name": "Lider remove diretriz temporaria - 204",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{leaderToken}}" }],
+            "url": "{{baseUrl}}/api/Guideline/{{guidelineId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Diretriz removida logicamente', () => pm.response.to.have.status(204));"] }
+          }]
+        }
+      ]
+    }
+  ]
+}
