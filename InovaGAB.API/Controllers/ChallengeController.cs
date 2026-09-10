@@ -20,36 +20,62 @@ public class ChallengeController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Leader")]
-    public async Task<IActionResult> Create([FromBody] CreateChallengeRequest request)
+    public async Task<IActionResult> Create(
+        [FromBody] CreateChallengeRequest request)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var response = await _challengeService.CreateAsync(request, userId);
-        return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
+        var userId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+        var response = await _challengeService.CreateAsync(
+            request,
+            userId);
+
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = response.Id },
+            response);
     }
 
     [HttpGet]
     [Authorize(Roles = "Operator,Manager,Leader")]
     public async Task<IActionResult> GetAll()
     {
-        var challenges = await _challengeService.GetAllActiveAsync();
+        var challenges =
+            await _challengeService.GetAllActiveAsync();
+
         return Ok(challenges);
     }
 
     [HttpGet("{id}")]
     [Authorize(Roles = "Operator,Manager,Leader")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetById(string id)
     {
-        var challenge = await _challengeService.GetByIdAsync(id);
-        if (challenge == null) return NotFound();
+        var challenge =
+            await _challengeService.GetByIdAsync(id);
+
+        if (challenge == null)
+        {
+            return NotFound();
+        }
+
         return Ok(challenge);
     }
 
     [HttpPut("{id}")]
     [Authorize(Roles = "Leader")]
-    public async Task<IActionResult> Update(int id, [FromBody] CreateChallengeRequest request)
+    public async Task<IActionResult> Update(
+        string id,
+        [FromBody] CreateChallengeRequest request)
     {
-        var result = await _challengeService.UpdateAsync(id, request);
-        if (result == null) return NotFound();
+        var result = await _challengeService.UpdateAsync(
+            id,
+            request);
+
+        if (result == null)
+        {
+            return NotFound();
+        }
+
         return Ok(result);
     }
 }

@@ -1,10 +1,13 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace InovaGAB.API.Models
 {
     public class Idea
     {
-        public int Id { get; set; }
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
 
         public string Title { get; set; } = string.Empty;
 
@@ -30,12 +33,14 @@ namespace InovaGAB.API.Models
 
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-        public int UserId { get; set; }
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string UserId { get; set; } = string.Empty;
 
         [BsonIgnore]
         public User User { get; set; } = null!;
 
-        public int? ChallengeId { get; set; }
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? ChallengeId { get; set; }
 
         [BsonIgnore]
         public Challenge? Challenge { get; set; }

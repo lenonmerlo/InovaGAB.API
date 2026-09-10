@@ -3,21 +3,33 @@ using InovaGAB.API.DTOs.Request;
 using InovaGAB.API.DTOs.Response;
 using InovaGAB.API.Models;
 using InovaGAB.API.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 
 namespace InovaGAB.API.Services.Implementations;
 
 public class ChallengeService : IChallengeService
 {
-    private readonly AppDbContext _context;
+    private readonly MongoDbContext _context;
 
-    public ChallengeService(AppDbContext context)
+    public ChallengeService(MongoDbContext context)
     {
         _context = context;
     }
 
-    public async Task<ChallengeResponse> CreateAsync(CreateChallengeRequest request, int userId)
+    public async Task<ChallengeResponse> CreateAsync(
+        CreateChallengeRequest request,
+        string userId)
     {
+        var creator = await _context.Users
+            .Find(user => user.Id == userId)
+            .FirstOrDefaultAsync();
+
+        if (creator == null)
+        {
+            throw new InvalidOperationException(
+                "Usuário responsável não encontrado.");
+        }
+
         var challenge = new Challenge
         {
             Title = request.Title,
@@ -27,13 +39,11 @@ public class ChallengeService : IChallengeService
             EndDate = request.EndDate,
             IsActive = true,
             CreatedById = userId,
+            CreatedBy = creator,
             CreatedAt = DateTime.UtcNow
         };
 
-        _context.Challenges.Add(challenge);
-        await _context.SaveChangesAsync();
-
-        await _context.Entry(challenge).Reference(c => c.CreatedBy).LoadAsync();
+        await _context.Challenges.InsertOneAsync(challenge);
 
         return MapToResponse(challenge);
     }
@@ -41,36 +51,49 @@ public class ChallengeService : IChallengeService
     public async Task<List<ChallengeResponse>> GetAllActiveAsync()
     {
         var challenges = await _context.Challenges
-            .Include(c => c.CreatedBy)
-            .Include(c => c.Ideas)
-                .ThenInclude(i => i.User)
-            .Where(c => c.IsActive)
-            .OrderBy(c => c.EndDate)
+            .Find(challenge => challenge.IsActive)
+            .SortBy(challenge => challenge.EndDate)
             .ToListAsync();
 
-        return challenges.Select(MapToResponse).ToList();
+        foreach (var challenge in challenges)
+        {
+            await LoadRelationsAsync(challenge);
+        }
+
+        return challenges
+            .Select(MapToResponse)
+            .ToList();
     }
 
-    public async Task<ChallengeResponse?> GetByIdAsync(int id)
+    public async Task<ChallengeResponse?> GetByIdAsync(
+        string id)
     {
         var challenge = await _context.Challenges
-            .Include(c => c.CreatedBy)
-            .Include(c => c.Ideas)
-                .ThenInclude(i => i.User)
-            .FirstOrDefaultAsync(c => c.Id == id);
+            .Find(challenge => challenge.Id == id)
+            .FirstOrDefaultAsync();
 
-        return challenge == null ? null : MapToResponse(challenge);
+        if (challenge == null)
+        {
+            return null;
+        }
+
+        await LoadRelationsAsync(challenge);
+
+        return MapToResponse(challenge);
     }
 
-    public async Task<ChallengeResponse?> UpdateAsync(int id, CreateChallengeRequest request)
+    public async Task<ChallengeResponse?> UpdateAsync(
+        string id,
+        CreateChallengeRequest request)
     {
         var challenge = await _context.Challenges
-            .Include(c => c.CreatedBy)
-            .Include(c => c.Ideas)
-                .ThenInclude(i => i.User)
-            .FirstOrDefaultAsync(c => c.Id == id);
+            .Find(challenge => challenge.Id == id)
+            .FirstOrDefaultAsync();
 
-        if (challenge == null) return null;
+        if (challenge == null)
+        {
+            return null;
+        }
 
         challenge.Title = request.Title;
         challenge.Description = request.Description;
@@ -78,36 +101,78 @@ public class ChallengeService : IChallengeService
         challenge.StartDate = request.StartDate;
         challenge.EndDate = request.EndDate;
 
-        await _context.SaveChangesAsync();
+        var updateResult = await _context.Challenges.ReplaceOneAsync(
+            existingChallenge => existingChallenge.Id == id,
+            challenge);
+
+        if (updateResult.MatchedCount == 0)
+        {
+            return null;
+        }
+
+        await LoadRelationsAsync(challenge);
+
         return MapToResponse(challenge);
     }
 
-    private static ChallengeResponse MapToResponse(Challenge challenge) => new()
+    private async Task LoadRelationsAsync(
+        Challenge challenge)
     {
-        Id = challenge.Id,
-        Title = challenge.Title,
-        Description = challenge.Description,
-        Prize = challenge.Prize,
-        StartDate = challenge.StartDate,
-        EndDate = challenge.EndDate,
-        IsActive = challenge.IsActive,
-        DaysRemaining = Math.Max(0, (int)(challenge.EndDate - DateTime.UtcNow).TotalDays),
-        CreatedByName = challenge.CreatedBy?.Name ?? string.Empty,
-        TotalIdeas = challenge.Ideas?.Count ?? 0,
-        Ideas = challenge.Ideas?.Select(i => new IdeaResponse
+        challenge.CreatedBy = await _context.Users
+            .Find(user => user.Id == challenge.CreatedById)
+            .FirstOrDefaultAsync();
+
+        var ideas = await _context.Ideas
+            .Find(idea => idea.ChallengeId == challenge.Id)
+            .ToListAsync();
+
+        foreach (var idea in ideas)
         {
-            Id = i.Id,
-            Title = i.Title,
-            Description = i.Description,
-            Division = i.Division,
-            Status = i.Status.ToString(),
-            ImpactScore = i.ImpactScore,
-            FeasibilityScore = i.FeasibilityScore,
-            AlignmentScore = i.AlignmentScore,
-            TotalScore = i.TotalScore,
-            EvidenceUrl = i.EvidenceUrl,
-            CreatedAt = i.CreatedAt,
-            UserName = i.User?.Name ?? string.Empty
-        }).ToList() ?? new()
-    };
+            idea.User = await _context.Users
+                .Find(user => user.Id == idea.UserId)
+                .FirstOrDefaultAsync();
+        }
+
+        challenge.Ideas = ideas;
+    }
+
+    private static ChallengeResponse MapToResponse(
+        Challenge challenge)
+    {
+        return new ChallengeResponse
+        {
+            Id = challenge.Id,
+            Title = challenge.Title,
+            Description = challenge.Description,
+            Prize = challenge.Prize,
+            StartDate = challenge.StartDate,
+            EndDate = challenge.EndDate,
+            IsActive = challenge.IsActive,
+            DaysRemaining = Math.Max(
+                0,
+                (int)(challenge.EndDate - DateTime.UtcNow)
+                    .TotalDays),
+            CreatedByName =
+                challenge.CreatedBy?.Name ?? string.Empty,
+            TotalIdeas = challenge.Ideas?.Count ?? 0,
+            Ideas = challenge.Ideas?
+                .Select(idea => new IdeaResponse
+                {
+                    Id = idea.Id,
+                    Title = idea.Title,
+                    Description = idea.Description,
+                    Division = idea.Division,
+                    Status = idea.Status.ToString(),
+                    ImpactScore = idea.ImpactScore,
+                    FeasibilityScore = idea.FeasibilityScore,
+                    AlignmentScore = idea.AlignmentScore,
+                    TotalScore = idea.TotalScore,
+                    EvidenceUrl = idea.EvidenceUrl,
+                    CreatedAt = idea.CreatedAt,
+                    UserName =
+                        idea.User?.Name ?? string.Empty
+                })
+                .ToList() ?? new List<IdeaResponse>()
+        };
+    }
 }

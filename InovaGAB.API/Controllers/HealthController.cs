@@ -23,17 +23,18 @@ namespace InovaGAB.API.Controllers
         {
             var command = new BsonDocument("ping", 1);
 
-            var result = await _mongoDatabase.RunCommandAsync<BsonDocument>(
-                command,
-                cancellationToken: cancellationToken);
+            var result =
+                await _mongoDatabase.RunCommandAsync<BsonDocument>(
+                    command,
+                    cancellationToken: cancellationToken);
 
             return Ok(new
             {
-                status = "health",
-                database = _mongoDatabase.DatabaseNamespace.DatabaseName,
+                status = "healthy",
+                database =
+                    _mongoDatabase.DatabaseNamespace.DatabaseName,
                 mongoPing = result["ok"].ToDouble()
             });
         }
     }
-    
 }

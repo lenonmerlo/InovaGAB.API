@@ -10,6 +10,6 @@
         public DateTime StartDate {  get; set; }
         public DateTime Deadline {  get; set; }
 
-        public int? IdeaId {  get; set; }
+        public string? IdeaId {  get; set; }
     }
 }

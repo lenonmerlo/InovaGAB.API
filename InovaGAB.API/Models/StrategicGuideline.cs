@@ -1,10 +1,13 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace InovaGAB.API.Models
 {
     public class StrategicGuideline
     {
-        public int Id { get; set; }
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
 
         public string Title { get; set; } = string.Empty;
 
@@ -21,7 +24,8 @@ namespace InovaGAB.API.Models
 
         public DateTime? UpdatedAt { get; set; }
 
-        public int CreatedById { get; set; }
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string CreatedById { get; set; } = string.Empty;
 
         [BsonIgnore]
         public User CreatedBy { get; set; } = null!;

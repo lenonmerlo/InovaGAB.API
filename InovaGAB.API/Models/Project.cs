@@ -5,7 +5,9 @@ namespace InovaGAB.API.Models
 {
     public class Project
     {
-        public int Id { get; set; }
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
 
         public string Title { get; set; } = string.Empty;
 
@@ -41,12 +43,14 @@ namespace InovaGAB.API.Models
 
         public DateTime? UpdatedAt { get; set; }
 
-        public int ManagerId { get; set; }
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string ManagerId { get; set; } = string.Empty;
 
         [BsonIgnore]
         public User Manager { get; set; } = null!;
 
-        public int? IdeaId { get; set; }
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? IdeaId { get; set; }
 
         [BsonIgnore]
         public Idea? Idea { get; set; }

@@ -5,9 +5,9 @@ namespace InovaGAB.API.Services.Interfaces
 {
     public interface IProjectService
     {
-        Task<ProjectResponse> CreateAsync(CreateProjectRequest request, int managerId);
+        Task<ProjectResponse> CreateAsync(CreateProjectRequest request, string managerId);
         Task<List<ProjectResponse>> GetAllAsync();
-        Task<ProjectResponse?> GetByIdAsync(int id);
-        Task<ProjectResponse?> UpdateAsync(int id, UpdateProjectRequest request);
+        Task<ProjectResponse?> GetByIdAsync(string id);
+        Task<ProjectResponse?> UpdateAsync(string id, UpdateProjectRequest request);
     }
 }

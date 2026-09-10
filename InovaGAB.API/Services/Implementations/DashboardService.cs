@@ -2,103 +2,151 @@
 using InovaGAB.API.DTOs.Response;
 using InovaGAB.API.Models;
 using InovaGAB.API.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 
 namespace InovaGAB.API.Services.Implementations;
 
 public class DashboardService : IDashboardService
 {
-    private readonly AppDbContext _context;
+    private readonly MongoDbContext _context;
 
-    public DashboardService(AppDbContext context)
+    public DashboardService(MongoDbContext context)
     {
         _context = context;
     }
 
     public async Task<DashboardResponse> GetDashboardAsync()
     {
-        var projects = await _context.Projects
-            .Include(p => p.Manager)
+        var projectsTask = _context.Projects
+            .Find(_ => true)
             .ToListAsync();
 
-        var ideas = await _context.Ideas
-            .Include(i => i.User)
+        var ideasTask = _context.Ideas
+            .Find(_ => true)
             .ToListAsync();
 
-        var users = await _context.Users.ToListAsync();
+        var usersTask = _context.Users
+            .Find(_ => true)
+            .ToListAsync();
+
+        await Task.WhenAll(
+            projectsTask,
+            ideasTask,
+            usersTask);
+
+        var projects = await projectsTask;
+        var ideas = await ideasTask;
+        var users = await usersTask;
+
+        var usersById = users.ToDictionary(
+            user => user.Id,
+            user => user);
+
+        foreach (var project in projects)
+        {
+            if (usersById.TryGetValue(
+                    project.ManagerId,
+                    out var manager))
+            {
+                project.Manager = manager;
+            }
+        }
+
+        foreach (var idea in ideas)
+        {
+            if (usersById.TryGetValue(
+                    idea.UserId,
+                    out var user))
+            {
+                idea.User = user;
+            }
+        }
 
         var now = DateTime.UtcNow;
 
-        // KPIs financeiros
-        var totalRoi = projects.Sum(p => p.Roi);
-        var totalSavings = projects.Sum(p => p.FinancialReturn);
-        var productivityAvg = projects.Any()
-            ? (int)projects.Average(p => p.ProductivityGain)
+        var totalInvestment = projects.Sum(
+            project => project.Investment);
+
+        var totalFinancialReturn = projects.Sum(
+            project => project.FinancialReturn);
+
+        var totalRoi = totalInvestment > 0
+            ? (totalFinancialReturn - totalInvestment)
+              / totalInvestment * 100
             : 0;
 
-        // Projetos
-        var activeProjects = projects.Count(p =>
-            p.Status == ProjectStatus.InProgress ||
-            p.Status == ProjectStatus.Planning);
+        var productivityAverage = projects.Count > 0
+            ? (int)projects.Average(
+                project => project.ProductivityGain)
+            : 0;
 
-        var delayedProjects = projects.Count(p =>
-            p.Deadline < now &&
-            p.Status != ProjectStatus.Completed &&
-            p.Status != ProjectStatus.Cancelled);
+        var activeProjects = projects.Count(project =>
+            project.Status == ProjectStatus.InProgress ||
+            project.Status == ProjectStatus.Planning);
 
-        // Funil de ideias
+        var delayedProjects = projects.Count(project =>
+            project.Deadline < now &&
+            project.Status != ProjectStatus.Completed &&
+            project.Status != ProjectStatus.Cancelled);
+
         var funnel = new IdeaFunnelDto
         {
             TotalSubmitted = ideas.Count,
-            UnderReview = ideas.Count(i => i.Status == IdeaStatus.UnderReview),
-            Approved = ideas.Count(i => i.Status == IdeaStatus.Approved),
-            Rejected = ideas.Count(i => i.Status == IdeaStatus.Rejected),
-            ConvertedToProjects = projects.Count(p => p.IdeaId != null)
+            UnderReview = ideas.Count(idea =>
+                idea.Status == IdeaStatus.UnderReview),
+            Approved = ideas.Count(idea =>
+                idea.Status == IdeaStatus.Approved),
+            Rejected = ideas.Count(idea =>
+                idea.Status == IdeaStatus.Rejected),
+            ConvertedToProjects = projects.Count(project =>
+                project.IdeaId != null)
         };
 
-        // Top 3 projetos por ROI
         var topProjects = projects
-            .OrderByDescending(p => p.Roi)
+            .OrderByDescending(project => project.Roi)
             .Take(3)
-            .Select(p => new ProjectResponse
+            .Select(project => new ProjectResponse
             {
-                Id = p.Id,
-                Title = p.Title,
-                Description = p.Description,
-                Division = p.Division,
-                Status = p.Status.ToString(),
-                Stage = p.Stage.ToString(),
-                Investment = p.Investment,
-                FinancialReturn = p.FinancialReturn,
-                Roi = p.Roi,
-                ProductivityGain = p.ProductivityGain,
-                StartDate = p.StartDate,
-                Deadline = p.Deadline,
-                ProgressPercent = p.ProgressPercent,
-                CreatedAt = p.CreatedAt,
-                ManagerName = p.Manager?.Name ?? string.Empty,
-                IdeaId = p.IdeaId
-            }).ToList();
+                Id = project.Id,
+                Title = project.Title,
+                Description = project.Description,
+                Division = project.Division,
+                Status = project.Status.ToString(),
+                Stage = project.Stage.ToString(),
+                Investment = project.Investment,
+                FinancialReturn = project.FinancialReturn,
+                Roi = project.Roi,
+                ProductivityGain = project.ProductivityGain,
+                StartDate = project.StartDate,
+                Deadline = project.Deadline,
+                ProgressPercent = project.ProgressPercent,
+                CreatedAt = project.CreatedAt,
+                ManagerName =
+                    project.Manager?.Name ?? string.Empty,
+                IdeaId = project.IdeaId
+            })
+            .ToList();
 
-        // Top contribuidores por pontos
         var topContributors = users
-            .OrderByDescending(u => u.Points)
+            .OrderByDescending(user => user.Points)
             .Take(5)
-            .Select(u => new RankingItemDto
+            .Select(user => new RankingItemDto
             {
-                UserName = u.Name,
-                Division = u.Division,
-                Points = u.Points,
-                IdeasApproved = ideas.Count(i =>
-                    i.UserId == u.Id &&
-                    i.Status == IdeaStatus.Approved)
-            }).ToList();
+                UserName = user.Name,
+                Division = user.Division,
+                Points = user.Points,
+                IdeasApproved = ideas.Count(idea =>
+                    idea.UserId == user.Id &&
+                    idea.Status == IdeaStatus.Approved)
+            })
+            .ToList();
 
         return new DashboardResponse
         {
             TotalRoi = totalRoi,
-            TotalSavings = totalSavings,
-            ProductivityGainAverage = productivityAvg,
+            TotalSavings = totalFinancialReturn,
+            ProductivityGainAverage =
+                productivityAverage,
             ActiveProjects = activeProjects,
             DelayedProjects = delayedProjects,
             IdeaFunnel = funnel,
