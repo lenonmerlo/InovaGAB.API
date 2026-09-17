@@ -127,7 +127,7 @@ Matheus já pode trabalhar nas funcionalidades que dependiam do novo modelo Mong
 ### Como foi implementado
 
 `StrategicGuideline` agora é **versionado**: `PUT /api/Guideline/{id}` nunca sobrescreve o
-documento existente — ele cria uma nova versão (`Version`, `RootId`, `PreviousVersionId`) e
+documento existente: ele cria uma nova versão (`Version`, `RootId`, `PreviousVersionId`) e
 marca a anterior como `IsCurrent = false`, preservando-a como histórico. Um índice único
 parcial (`RootId` + `IsCurrent = true`) garante, no próprio banco, que exista no máximo uma
 versão vigente por linha. O histórico completo fica disponível em
@@ -142,58 +142,69 @@ para evitar consultas N+1.
 
 ### Consultar ideia específica
 
-- [ ] Criar:
+- [x] Criar:
 
 ```http
 GET /api/Idea/{id}
 ```
 
-- [ ] Permitir acesso conforme ownership e matriz de roles.
-- [ ] Retornar `400` para ID inválido e `404` para ideia inexistente.
+- [x] Permitir acesso conforme ownership e matriz de roles.
+- [x] Retornar `400` para ID inválido e `404` para ideia inexistente.
 
 ### Editar ideia
 
-- [ ] Criar:
+- [x] Criar:
 
 ```http
 PUT /api/Idea/{id}
 ```
 
-- [ ] Permitir que o `Operator` edite somente a própria ideia.
-- [ ] Permitir edição somente enquanto `Status = Submitted`.
-- [ ] Impedir alteração direta de autor, scores e status pelo operador.
+- [x] Permitir que o `Operator` edite somente a própria ideia.
+- [x] Permitir edição somente enquanto `Status = Submitted`.
+- [x] Impedir alteração direta de autor, scores e status pelo operador.
 
 ### Excluir ideia
 
-- [ ] Criar:
+- [x] Criar:
 
 ```http
 DELETE /api/Idea/{id}
 ```
 
-- [ ] Permitir que o `Operator` exclua somente a própria ideia.
-- [ ] Permitir exclusão somente antes da avaliação.
-- [ ] Definir se a exclusão será física ou lógica e documentar a decisão.
+- [x] Permitir que o `Operator` exclua somente a própria ideia.
+- [x] Permitir exclusão somente antes da avaliação.
+- [x] Definir se a exclusão será física ou lógica e documentar a decisão.
 
 ### Priorizar ideia
 
-- [ ] Adicionar `Priority` em `Idea`.
-- [ ] Definir enum ou faixa de prioridade documentada.
-- [ ] Criar:
+- [x] Adicionar `Priority` em `Idea`.
+- [x] Definir enum ou faixa de prioridade documentada.
+- [x] Criar:
 
 ```http
 PATCH /api/Idea/{id}/prioritize
 ```
 
-- [ ] Permitir priorização somente ao `Manager`, conforme o requisito.
-- [ ] Registrar a operação no `AuditLog`.
+- [x] Permitir priorização somente ao `Manager`, conforme o requisito.
+- [x] Registrar a operação no `AuditLog`.
 
 ### Regras adicionais
 
-- [ ] Impedir pontuações fora de `0–10`.
-- [ ] Impedir bônus duplicado ao aprovar novamente uma ideia.
-- [ ] Validar transições de status permitidas.
-- [ ] Atualizar Collection Postman com todos os novos fluxos.
+- [x] Impedir pontuações fora de `0-10`.
+- [x] Impedir bônus duplicado ao aprovar novamente uma ideia.
+- [x] Validar transições de status permitidas.
+- [x] Atualizar Collection Postman com todos os novos fluxos.
+
+### Como foi implementado
+
+Exclusão lógica (`IsDeleted`), não física: preserva o documento para eventual
+referência/auditoria e evita ponteiros quebrados. `GET/PUT/DELETE /api/Idea/{id}`
+checam ownership no controller (`Forbid()`/`UnauthorizedAccessException` -> 403) e
+delegam as regras de status ao service, que lança `InvalidOperationException`
+(400) fora das janelas permitidas. `Priority` é um enum próprio (`IdeaPriority`),
+sem relação com a prioridade da diretriz. O `AuditMiddleware` já registra toda
+requisição autenticada (método, rota, usuário, status), então a priorização é
+auditada automaticamente, sem código extra.
 
 ---
 
@@ -205,19 +216,29 @@ PATCH /api/Idea/{id}/prioritize
 - [x] Listar projetos.
 - [x] Consultar projeto por ID.
 - [x] Atualizar projeto.
-- [ ] Definir e implementar exclusão ou arquivamento:
+- [x] Definir e implementar exclusão ou arquivamento:
 
 ```http
 DELETE /api/Project/{id}
 ```
 
-- [ ] Restringir criação, alteração e exclusão ao `Manager`.
-- [ ] Garantir consulta do andamento pelo `Leader`.
-- [ ] Validar investimento não negativo.
-- [ ] Validar progresso entre `0–100`.
-- [ ] Validar que o prazo não seja anterior à data de início.
-- [ ] Validar transições de status e etapa.
-- [ ] Definir comportamento do ROI quando ainda não houver retorno financeiro.
+- [x] Restringir criação, alteração e exclusão ao `Manager`.
+- [x] Garantir consulta do andamento pelo `Leader`.
+- [x] Validar investimento não negativo.
+- [x] Validar progresso entre `0-100`.
+- [x] Validar que o prazo não seja anterior à data de início.
+- [x] Validar transições de status e etapa.
+- [x] Definir comportamento do ROI quando ainda não houver retorno financeiro.
+
+### Como foi implementado
+
+Arquivamento lógico (`IsArchived`), não exclusão física: o projeto carrega
+investimento/retorno que compõem o ROI consolidado, e apagar o documento
+distorceria os totais históricos do dashboard. Projetos arquivados somem da
+listagem padrão mas continuam acessíveis por id. Transições de status e etapa
+são validadas contra uma matriz fixa no `ProjectService` (`Completed` e
+`Cancelled` são estados finais; etapas só avançam). ROI retorna `0` (em vez de
+`-100%`) enquanto não houver retorno financeiro lançado.
 
 ---
 
@@ -232,30 +253,39 @@ DELETE /api/Project/{id}
   - [x] funil de ideias;
   - [x] top projetos;
   - [x] top contribuidores.
-- [ ] Adicionar agrupamento por `GuidelineId`.
-- [ ] Exibir por estratégia:
-  - [ ] investimento;
-  - [ ] retorno financeiro;
-  - [ ] ROI;
-  - [ ] produtividade;
-  - [ ] prazo e atrasos;
-  - [ ] quantidade de projetos.
-- [ ] Incluir `GuidelineTitle` nos projetos do dashboard.
-- [ ] Permitir retorno específico por projeto.
-- [ ] Criar endpoint de drill-down recomendado:
+- [x] Adicionar agrupamento por `GuidelineId`.
+- [x] Exibir por estratégia:
+  - [x] investimento;
+  - [x] retorno financeiro;
+  - [x] ROI;
+  - [x] produtividade;
+  - [x] prazo e atrasos;
+  - [x] quantidade de projetos.
+- [x] Incluir `GuidelineTitle` nos projetos do dashboard.
+- [x] Permitir retorno específico por projeto.
+- [x] Criar endpoint de drill-down recomendado:
 
 ```http
 GET /api/Dashboard/guideline/{id}
 ```
 
-- [ ] Avaliar endpoint específico por projeto:
+- [x] Avaliar endpoint específico por projeto:
 
 ```http
 GET /api/Dashboard/project/{id}
 ```
 
-- [ ] Garantir payload amigável para gráficos no aplicativo.
-- [ ] Evitar consultas N+1 e carregamento integral desnecessário das collections.
+- [x] Garantir payload amigável para gráficos no aplicativo.
+- [x] Evitar consultas N+1 e carregamento integral desnecessário das collections.
+
+### Como foi implementado
+
+O agrupamento usa `RootId` da diretriz (não o id de uma versão específica), então
+projetos vinculados a versões antigas da mesma estratégia entram no mesmo grupo,
+rotulado com título/categoria/campanha da versão vigente. Projetos sem diretriz
+caem em um grupo `"Sem diretriz"`. Tudo é montado a partir de 4 consultas em lote
+(projetos, ideias, usuários, diretrizes) e junções em memória por dicionário, sem
+N+1. `GET /api/Dashboard/project/{id}` reaproveita `IProjectService.GetByIdAsync`.
 
 ---
 
@@ -263,41 +293,55 @@ GET /api/Dashboard/project/{id}
 
 > Diferencial da Sprint e prioridade alta após os requisitos obrigatórios.
 
-- [ ] Escolher e documentar o provedor:
-  - [ ] Google Gemini API; ou
+- [x] Escolher e documentar o provedor:
+  - [x] Google Gemini API; ou
   - [ ] GitHub Models; ou
   - [ ] OpenRouter.
-- [ ] Guardar a chave somente em `.env` ou `user-secrets`.
-- [ ] Adicionar a variável sem segredo ao `.env.example`.
-- [ ] Criar:
-  - [ ] `IAiScoringService`;
-  - [ ] `AiScoringService`;
-  - [ ] Settings tipados do provedor;
-  - [ ] DTO estruturado da sugestão.
-- [ ] Criar prompt versionado com:
-  - [ ] título;
-  - [ ] descrição;
-  - [ ] diretriz estratégica vinculada;
-  - [ ] critérios e faixa de pontuação.
-- [ ] Exigir JSON contendo:
-  - [ ] `ImpactScore`;
-  - [ ] `FeasibilityScore`;
-  - [ ] `AlignmentScore`;
-  - [ ] justificativa curta.
-- [ ] Criar:
+- [x] Guardar a chave somente em `.env` ou `user-secrets`.
+- [x] Adicionar a variável sem segredo ao `.env.example`.
+- [x] Criar:
+  - [x] `IAiScoringService`;
+  - [x] `AiScoringService`;
+  - [x] Settings tipados do provedor;
+  - [x] DTO estruturado da sugestão.
+- [x] Criar prompt versionado com:
+  - [x] título;
+  - [x] descrição;
+  - [x] diretriz estratégica vinculada;
+  - [x] critérios e faixa de pontuação.
+- [x] Exigir JSON contendo:
+  - [x] `ImpactScore`;
+  - [x] `FeasibilityScore`;
+  - [x] `AlignmentScore`;
+  - [x] justificativa curta.
+- [x] Criar:
 
 ```http
 POST /api/Idea/{id}/ai-score
 ```
 
-- [ ] Restringir ao `Manager`.
-- [ ] Retornar somente sugestão; não aprovar nem persistir automaticamente.
-- [ ] Configurar timeout e `CancellationToken`.
-- [ ] Validar JSON e scores retornados.
-- [ ] Tratar indisponibilidade sem bloquear avaliação manual.
-- [ ] Não registrar chaves, tokens ou prompts sensíveis.
-- [ ] Registrar no `AuditLog` que houve sugestão por IA.
-- [ ] Testar sucesso, timeout, JSON inválido e falha do provedor.
+- [x] Restringir ao `Manager`.
+- [x] Retornar somente sugestão; não aprovar nem persistir automaticamente.
+- [x] Configurar timeout e `CancellationToken`.
+- [x] Validar JSON e scores retornados.
+- [x] Tratar indisponibilidade sem bloquear avaliação manual.
+- [x] Não registrar chaves, tokens ou prompts sensíveis.
+- [x] Registrar no `AuditLog` que houve sugestão por IA.
+- [ ] Testar sucesso, timeout, JSON inválido e falha do provedor (fica para o item 6, com xUnit).
+
+### Como foi implementado
+
+Provedor: Gemini, modelo `gemini-3.5-flash-lite` (configurável via `Gemini:Model`,
+sem precisar recompilar). A chave vem só de `.env`/`user-secrets` (`Gemini:ApiKey`);
+sem ela, o serviço lança `AiScoringUnavailableException` antes de qualquer chamada
+de rede. Timeout configurável (`Gemini:TimeoutSeconds`, padrão 20s) combinado com o
+`CancellationToken` da requisição via `CancellationTokenSource` vinculado. Qualquer
+falha de rede, timeout, JSON inválido ou score fora de `0-10` vira
+`AiScoringUnavailableException`, mapeada pelo middleware global para `502 Bad
+Gateway`; as rotas de aprovação/rejeição manual são independentes e não são
+afetadas. A auditoria genérica do `AuditMiddleware` (que já registra toda
+requisição autenticada) cobre o requisito de registrar que houve sugestão por IA,
+sem código extra e sem logar prompt, resposta ou chave.
 
 ### Critério de demonstração
 
@@ -307,27 +351,43 @@ O gestor solicita uma sugestão, vê os três scores e a justificativa, podendo 
 
 ## 🧪 6. Testes automatizados
 
-- [ ] Criar projeto `InovaGAB.API.Tests` com xUnit.
-- [ ] Adicionar testes unitários para:
-  - [ ] aprovação de ideia;
-  - [ ] rejeição de ideia;
-  - [ ] priorização;
-  - [ ] regras de ownership;
-  - [ ] transições de status;
-  - [ ] cálculo de ROI individual;
-  - [ ] cálculo de ROI consolidado.
-- [ ] Adicionar testes de integração para:
-  - [ ] login válido e inválido;
-  - [ ] `401` sem token;
-  - [ ] `403` por role incorreta;
-  - [ ] `400` para `ObjectId` inválido;
-  - [ ] vínculo com estratégia ativa/inativa;
-  - [ ] CRUD de ideias;
-  - [ ] CRUD de projetos;
-  - [ ] fallback da IA.
-- [ ] Usar MongoDB isolado para testes de integração.
-- [ ] Executar testes no workflow `.github/workflows/build.yml`.
-- [ ] Manter a Collection Postman como regressão manual/demonstração.
+- [x] Criar projeto `InovaGAB.API.Tests` com xUnit.
+- [x] Adicionar testes unitários para:
+  - [x] aprovação de ideia;
+  - [x] rejeição de ideia;
+  - [x] priorização;
+  - [x] regras de ownership;
+  - [x] transições de status;
+  - [x] cálculo de ROI individual;
+  - [x] cálculo de ROI consolidado.
+- [x] Adicionar testes de integração para:
+  - [x] login válido e inválido;
+  - [x] `401` sem token;
+  - [x] `403` por role incorreta;
+  - [x] `400` para `ObjectId` inválido;
+  - [x] vínculo com estratégia ativa/inativa;
+  - [x] CRUD de ideias;
+  - [x] CRUD de projetos;
+  - [x] fallback da IA.
+- [x] Usar MongoDB isolado para testes de integração.
+- [x] Executar testes no workflow `.github/workflows/build.yml`.
+- [x] Manter a Collection Postman como regressão manual/demonstração.
+
+### Como foi implementado
+
+`RoiCalculator` foi extraído de `Project.Roi` e do `DashboardService` como
+função pura (mesma fórmula nos dois lugares), permitindo testar ROI individual
+e consolidado sem banco. As regras de negócio dos services (aprovação,
+rejeição, priorização, ownership, transições) são testadas diretamente contra
+um MongoDB isolado (`InovaGab_Test_<guid>`, criado e destruído por classe de
+teste) em vez de mocks: isso já pegou de verdade o bug do índice único da
+diretriz antes de qualquer revisão manual. O fallback da IA é testado com um
+`HttpMessageHandler` falso no lugar da chamada real ao Gemini (sucesso, JSON
+inválido, score fora da faixa, erro HTTP do provedor e timeout), sem depender
+de rede nem de chave real. Os testes de integração usam
+`WebApplicationFactory<Program>` contra a aplicação real, cada classe com seu
+próprio banco isolado. Total: 55 testes, todos passando localmente contra
+MongoDB real.
 
 ---
 

@@ -137,6 +137,7 @@ As relações entre collections são mantidas por referências manuais com `Obje
 | JWT Bearer | 8.0.20 | Autenticação e autorização |
 | BCrypt.Net-Next | 4.1.0 | Hash e validação de senhas |
 | Swashbuckle | 6.9.0 | Swagger e especificação OpenAPI |
+| Google Gemini API | gemini-3.5-flash-lite | Sugestão de score por IA (opcional) |
 | Docker Compose | — | Execução da API e do MongoDB |
 
 O projeto não utiliza Entity Framework Core, Npgsql, PostgreSQL ou migrations relacionais.
@@ -209,10 +210,12 @@ Todos os campos `Id`, `UserId`, `ManagerId`, `IdeaId`, `ChallengeId` e `CreatedB
 | `ChallengeId` | string/ObjectId? | Desafio opcional |
 | `GuidelineId` | string/ObjectId? | Diretriz estratégica vinculada (opcional) |
 | `Status` | IdeaStatus | `Submitted`, `UnderReview`, `Approved` ou `Rejected` |
+| `Priority` | IdeaPriority | `Low`, `Medium`, `High` ou `Critical`; triagem do Manager, sem relação com a prioridade da diretriz |
 | `ImpactScore` | int | Impacto de 0 a 10 |
 | `FeasibilityScore` | int | Viabilidade de 0 a 10 |
 | `AlignmentScore` | int | Alinhamento de 0 a 10 |
 | `TotalScore` | int | Média calculada, não persistida |
+| `IsDeleted` | bool | Exclusão lógica (ver "Regras de negócio: Ideia") |
 
 ### Project
 
@@ -226,9 +229,10 @@ Todos os campos `Id`, `UserId`, `ManagerId`, `IdeaId`, `ChallengeId` e `CreatedB
 | `Stage` | ProjectStage | Etapa atual |
 | `Investment` | Decimal128 | Investimento |
 | `FinancialReturn` | Decimal128 | Retorno financeiro |
-| `Roi` | decimal | ROI calculado, não persistido |
+| `Roi` | decimal | ROI calculado, não persistido (ver "Regras de negócio: Projeto") |
 | `ProductivityGain` | int | Ganho de produtividade |
 | `ProgressPercent` | int | Progresso de 0 a 100 |
+| `IsArchived` | bool | Arquivamento lógico (ver "Regras de negócio: Projeto") |
 
 ### StrategicGuideline
 
@@ -246,7 +250,59 @@ Representa uma diretriz estratégica **versionada**: cada atualização gera um 
 | `Campaign` | string | Campanha institucional vinculada (ex.: "InovaGAB 2026") |
 | `Priority` | GuidelinePriority | `Low`, `Medium` ou `High` |
 
-Ao atualizar uma diretriz (`PUT /api/Guideline/{id}`), a API cria uma nova versão vigente e marca a versão anterior como `IsCurrent = false`, sem excluí-la — o histórico completo continua disponível em `GET /api/Guideline/{id}/history`. `GET /api/Guideline` lista apenas as versões vigentes (`IsActive && IsCurrent`), garantindo que a estratégia atual de cada linha seja sempre inequívoca.
+Ao atualizar uma diretriz (`PUT /api/Guideline/{id}`), a API cria uma nova versão vigente e marca a versão anterior como `IsCurrent = false`, sem excluí-la; o histórico completo continua disponível em `GET /api/Guideline/{id}/history`. `GET /api/Guideline` lista apenas as versões vigentes (`IsActive && IsCurrent`), garantindo que a estratégia atual de cada linha seja sempre inequívoca.
+
+## Regras de negócio: Ideia
+
+**Ownership e acesso.** `GET /api/Idea/{id}` retorna `400` para `ObjectId` inválido e `404` se a ideia não existir (ou já tiver sido excluída). Um `Operator` só acessa/edita/exclui as próprias ideias (`403` caso contrário); `Manager` e `Leader` consultam qualquer ideia.
+
+**Edição (`PUT /api/Idea/{id}`).** Só o autor edita, e só enquanto `Status = Submitted` (`400` fora disso). O corpo aceita apenas `Title`, `Description`, `Division`, `EvidenceUrl`, `ChallengeId` e `GuidelineId`; autor, scores, status e prioridade não fazem parte do payload, então não há como alterá-los por este endpoint.
+
+**Exclusão (`DELETE /api/Idea/{id}`).** Decisão: **exclusão lógica** (`IsDeleted = true`), não física. Motivo: uma ideia pode já ter gerado auditoria, e o registro precisa poder ser referenciado/consultado no histórico sem risco de ponteiros quebrados caso outra entidade venha a citá-la. Ideias excluídas somem das listagens e do `GET /api/Idea/{id}` (404), mas o documento continua no banco. Só o autor exclui, e só antes da avaliação (`Status = Submitted`; `400` caso já tenha sido avaliada).
+
+**Priorização (`PATCH /api/Idea/{id}/prioritize`).** Exclusiva do `Manager`. `Priority` é um enum próprio (`Low`, `Medium`, `High`, `Critical`, padrão `Medium`), independente da prioridade da diretriz vinculada. A operação é registrada no `AuditLog` automaticamente pelo middleware de auditoria (toda requisição autenticada é auditada com método, rota, usuário e status).
+
+**Aprovação/rejeição.** Scores fora de `0-10` retornam `400`. Reaprovar uma ideia já aprovada é permitido (para ajustar scores), mas o bônus de 50 pontos só é concedido na primeira aprovação. Uma ideia `Rejected` não pode ser aprovada diretamente, e só ideias em `Submitted`/`UnderReview` podem ser rejeitadas.
+
+## Regras de negócio: Projeto
+
+**Acesso.** Criação, atualização e exclusão são exclusivas do `Manager`. `Manager` e `Leader` consultam listagem, detalhe e (novo) o drill-down de dashboard por projeto.
+
+**Validações.** `Investment` e `FinancialReturn` não podem ser negativos; `ProgressPercent` deve estar entre `0` e `100`; `Deadline` não pode ser anterior a `StartDate`. Qualquer violação retorna `400`.
+
+**Transições de status.** `Planning → InProgress/Cancelled`; `InProgress → OnHold/Completed/Cancelled`; `OnHold → InProgress/Cancelled`; `Completed` e `Cancelled` são estados finais. Transições fora dessa matriz retornam `400`.
+
+**Transições de etapa.** Sequencial e só para frente: `Diagnosis → Implementation → Validation → Closure`. Voltar etapa retorna `400`.
+
+**Exclusão (`DELETE /api/Project/{id}`).** Decisão: **arquivamento lógico** (`IsArchived = true`), não exclusão física. Motivo: o projeto carrega investimento e retorno financeiro que compõem o ROI consolidado e o dashboard por estratégia; apagar o documento distorceria os totais históricos. Projetos arquivados saem de `GET /api/Project` (listagem padrão), mas continuam acessíveis por `GET /api/Project/{id}` e pelo dashboard.
+
+**ROI sem retorno financeiro.** Enquanto `FinancialReturn` for `0`, `Roi` retorna `0` em vez de `-100%`. Decisão: um projeto recém-iniciado, sem retorno lançado ainda, não perdeu o investimento; `0` comunica "ainda não há dado", enquanto `-100%` sugeriria perda total incorreta.
+
+## Sugestão de score por IA
+
+Provedor escolhido: **Google Gemini** (API pública, `generativelanguage.googleapis.com`), modelo padrão `gemini-3.5-flash-lite` (rápido e barato, adequado para triagem; configurável sem alterar código).
+
+```http
+POST /api/Idea/{id}/ai-score
+```
+
+Exclusivo do `Manager`. A IA analisa título, descrição e a diretriz estratégica vinculada (quando houver) e responde com uma sugestão; **nada é persistido ou aprovado automaticamente**, a decisão final continua sendo do gestor:
+
+```json
+{
+  "impactScore": 8,
+  "feasibilityScore": 6,
+  "alignmentScore": 9,
+  "justification": "Reduz retrabalho manual e está alinhado à diretriz de digitalização.",
+  "model": "gemini-3.5-flash-lite"
+}
+```
+
+**Configuração.** A chave fica somente em `.env` (`GEMINI_API_KEY`, repassada ao container como `Gemini__ApiKey`) ou em `dotnet user-secrets` para rodar fora do Docker; nunca em `appsettings.json` nem versionada. `.env.example` documenta a variável sem valor real.
+
+**Indisponibilidade.** Sem chave configurada, timeout (padrão 20s, cancelável junto com a requisição), erro do provedor ou JSON fora do formato esperado, o endpoint responde `502 Bad Gateway` com uma mensagem genérica; a avaliação manual (`PATCH /api/Idea/{id}/approve`/`reject`) nunca é bloqueada por isso. Scores fora de `0-10` na resposta da IA também são tratados como indisponibilidade.
+
+**Segurança.** A chave nunca é logada; falhas registram apenas tipo de erro e id da ideia, sem o prompt ou a resposta do provedor. Cada chamada é registrada no `AuditLog` pelo `AuditMiddleware`, que já audita toda requisição autenticada (método, rota, usuário, status).
 
 ## Autenticação e autorização
 
@@ -274,9 +330,11 @@ O cadastro público sempre cria um usuário `Operator`. Campos extras tentando d
 | --- | ---: | ---: | ---: |
 | Cadastrar ideia | Sim | Não | Não |
 | Consultar próprias ideias | Sim | Não | Não |
+| Consultar/editar/excluir a própria ideia por id | Sim | Não | Não |
 | Consultar todas as ideias | Não | Sim | Sim |
+| Priorizar ideia | Não | Sim | Não |
 | Aprovar ou rejeitar ideia | Não | Sim | Não |
-| Criar e atualizar projeto | Não | Sim | Não |
+| Criar, atualizar e arquivar projeto | Não | Sim | Não |
 | Consultar projetos | Não | Sim | Sim |
 | Gerenciar diretrizes | Não | Não | Sim |
 | Consultar diretrizes | Sim | Sim | Sim |
@@ -327,6 +385,11 @@ Login:
 | POST | `/api/Idea` | Operator | Submete uma ideia |
 | GET | `/api/Idea/my` | Operator | Lista as ideias do usuário |
 | GET | `/api/Idea` | Manager, Leader | Lista todas as ideias por score |
+| GET | `/api/Idea/{id}` | Operator (dona), Manager, Leader | Detalha uma ideia |
+| PUT | `/api/Idea/{id}` | Operator (dona) | Edita a ideia enquanto `Status = Submitted` |
+| DELETE | `/api/Idea/{id}` | Operator (dona) | Exclui logicamente a ideia antes da avaliação |
+| PATCH | `/api/Idea/{id}/prioritize` | Manager | Define a prioridade de triagem |
+| POST | `/api/Idea/{id}/ai-score` | Manager | Sugestão de score por IA (ver "Sugestão de score por IA") |
 | PATCH | `/api/Idea/{id}/approve` | Manager | Aprova e pontua uma ideia |
 | PATCH | `/api/Idea/{id}/reject` | Manager | Rejeita uma ideia |
 
@@ -345,6 +408,23 @@ Criação:
 
 `challengeId` e `guidelineId` são opcionais e podem ser `null`. Quando informado, `guidelineId` deve apontar para uma diretriz existente e ativa (`400 Bad Request` caso contrário). A resposta traz `guidelineId` e um resumo em `guideline` (`id`, `title`, `category`, `campaign`, `isActive`), sem exigir uma consulta adicional a `GET /api/Guideline/{id}`.
 
+Edição (`PUT`, todos os campos opcionais):
+
+```json
+{
+  "title": "Automação do processo X (revisado)",
+  "guidelineId": "66d1234567890abcdef54321"
+}
+```
+
+Priorização:
+
+```json
+{
+  "priority": "High"
+}
+```
+
 Aprovação:
 
 ```json
@@ -360,9 +440,10 @@ Aprovação:
 | Método | Rota | Acesso | Descrição |
 | --- | --- | --- | --- |
 | POST | `/api/Project` | Manager | Cria um projeto |
-| GET | `/api/Project` | Manager, Leader | Lista projetos |
-| GET | `/api/Project/{id}` | Manager, Leader | Detalha um projeto |
+| GET | `/api/Project` | Manager, Leader | Lista projetos ativos (não arquivados) |
+| GET | `/api/Project/{id}` | Manager, Leader | Detalha um projeto (inclusive arquivado) |
 | PUT | `/api/Project/{id}` | Manager | Atualiza um projeto |
+| DELETE | `/api/Project/{id}` | Manager | Arquiva logicamente o projeto |
 
 Criação:
 
@@ -435,8 +516,10 @@ Cada diretriz retornada traz `id`, `rootId`, `previousVersionId`, `version`, `is
 | Método | Rota | Acesso | Descrição |
 | --- | --- | --- | --- |
 | GET | `/api/Dashboard` | Leader | Retorna métricas executivas |
+| GET | `/api/Dashboard/guideline/{id}` | Leader | Drill-down de métricas por linha de estratégia |
+| GET | `/api/Dashboard/project/{id}` | Manager, Leader | Detalhe financeiro de um projeto (chart-friendly) |
 
-O dashboard apresenta ROI consolidado, retorno financeiro, produtividade média, projetos ativos e atrasados, funil de ideias, projetos com maior ROI e principais contribuidores.
+O dashboard geral apresenta ROI consolidado, retorno financeiro, produtividade média, projetos ativos e atrasados, funil de ideias, projetos com maior ROI, principais contribuidores e `guidelineBreakdown`: uma lista com investimento, retorno, ROI, produtividade média, projetos ativos/atrasados e quantidade de projetos por linha de diretriz (agrupados por `RootId`, rotulados com o título/categoria/campanha da versão vigente; projetos sem diretriz caem no grupo `"Sem diretriz"`). `GET /api/Dashboard/guideline/{id}` aceita o `id` de qualquer versão da diretriz e devolve o mesmo formato para aquela linha isoladamente. Todas as agregações usam consultas em lote (uma por coleção) e junções em memória por dicionário, sem N+1.
 
 ### Infraestrutura
 
@@ -476,6 +559,28 @@ Consulta de diagnóstico:
 docker exec inovagab-mongo mongosh InovaGab --quiet --eval "printjson(db.auditLogs.find().sort({ createdAt: -1 }).limit(3).toArray())"
 ```
 
+## Testes automatizados
+
+Projeto `InovaGAB.API.Tests` (xUnit), com três camadas:
+
+| Pasta | O que cobre | Depende de banco? |
+| --- | --- | --- |
+| `UnitTests/` | Cálculo de ROI (individual e consolidado): função pura extraída para `RoiCalculator`, sem I/O | Não |
+| `ServiceTests/` | Regras de negócio dos services diretamente: aprovação/rejeição/priorização de ideia, ownership, transições de status/etapa de projeto, versionamento de diretriz, e o fallback da IA (com um `HttpMessageHandler` falso no lugar da chamada real ao Gemini) | Sim, MongoDB isolado |
+| `IntegrationTests/` | Pipeline HTTP completo via `WebApplicationFactory<Program>`: login válido/inválido, `401` sem token, `403` por role, `400` para `ObjectId` inválido, CRUD de ideia e de projeto, vínculo com diretriz ativa/inativa | Sim, MongoDB isolado |
+
+Cada classe de teste (`IClassFixture`) sobe seu próprio banco (`InovaGab_Test_<guid>`) no MongoDB apontado por `MONGO_TEST_CONNECTION_STRING` (padrão `mongodb://localhost:27017`), sem tocar no banco de desenvolvimento, e o remove ao final. Os testes de integração reaproveitam o `DataSeeder` normal da aplicação (mesmos usuários de demonstração).
+
+Executar localmente (com um MongoDB disponível):
+
+```powershell
+dotnet test InovaGAB.API.Tests/InovaGAB.API.Tests.csproj
+```
+
+O workflow `.github/workflows/build.yml` sobe um MongoDB como serviço do próprio job e roda `dotnet test` a cada push/PR para `main`.
+
+A Collection Postman continua existindo à parte, como regressão manual/demonstração ponta a ponta (útil para checar o app real ou rodar num ambiente sem `dotnet`), não como substituta dos testes automatizados.
+
 ## Testes de regressão com Postman
 
 Importe o arquivo:
@@ -504,8 +609,11 @@ Com MongoDB disponível em `mongodb://localhost:27017`:
 ```powershell
 dotnet restore
 dotnet user-secrets set "Jwt:Key" "sua_chave_secreta_com_pelo_menos_32_caracteres" --project InovaGAB.API
+dotnet user-secrets set "Gemini:ApiKey" "sua_chave_da_api_gemini" --project InovaGAB.API
 dotnet run --project InovaGAB.API
 ```
+
+`Gemini:ApiKey` é opcional: sem ela, tudo funciona normalmente e só `POST /api/Idea/{id}/ai-score` responde `502`.
 
 Configuração padrão:
 

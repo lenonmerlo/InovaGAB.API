@@ -11,6 +11,8 @@
     { "key": "managerToken", "value": "" },
     { "key": "leaderToken", "value": "" },
     { "key": "ideaId", "value": "" },
+    { "key": "ideaId2", "value": "" },
+    { "key": "operator2Token", "value": "" },
     { "key": "projectId", "value": "" },
     { "key": "guidelineId", "value": "" }
   ],
@@ -146,6 +148,151 @@
           }]
         },
         {
+          "name": "Operador cria segunda ideia - salva ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{operatorToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ideia editavel {{$timestamp}}\",\n  \"description\": \"Ideia usada para testar edicao, exclusao e priorizacao.\",\n  \"division\": \"Passageiros\",\n  \"evidenceUrl\": null,\n  \"challengeId\": null,\n  \"guidelineId\": null\n}"
+            },
+            "url": "{{baseUrl}}/api/Idea"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Segunda ideia criada com 201', () => pm.response.to.have.status(201));",
+                "pm.collectionVariables.set('ideaId2', pm.response.json().id);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Operador consulta ideia propria por id - 200",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{operatorToken}}" }],
+            "url": "{{baseUrl}}/api/Idea/{{ideaId2}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Operador consulta a propria ideia', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().userId).to.be.a('string');"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Operador consulta ideia com id invalido - 400",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{operatorToken}}" }],
+            "url": "{{baseUrl}}/api/Idea/ID_INVALIDO"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Id invalido retorna 400', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "Operador consulta ideia inexistente - 404",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{operatorToken}}" }],
+            "url": "{{baseUrl}}/api/Idea/000000000000000000000000"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Ideia inexistente retorna 404', () => pm.response.to.have.status(404));"] }
+          }]
+        },
+        {
+          "name": "Operador edita a propria ideia - 200",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{operatorToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ideia editavel atualizada\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Idea/{{ideaId2}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Ideia editada com 200', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().title).to.eql('Ideia editavel atualizada');"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Login segundo operador - salva token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"maria.operador@aguiabranca.com.br\",\n  \"password\": \"senha123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Auth/login"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Login segundo operador retorna 200', () => pm.response.to.have.status(200));",
+                "pm.collectionVariables.set('operator2Token', pm.response.json().token);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Segundo operador tenta ver ideia alheia - 403",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{operator2Token}}" }],
+            "url": "{{baseUrl}}/api/Idea/{{ideaId2}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Ownership bloqueia consulta', () => pm.response.to.have.status(403));"] }
+          }]
+        },
+        {
+          "name": "Segundo operador tenta editar ideia alheia - 403",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{operator2Token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Nao deveria mudar\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Idea/{{ideaId2}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Ownership bloqueia edicao', () => pm.response.to.have.status(403));"] }
+          }]
+        },
+        {
           "name": "Operador acessa dashboard - 403",
           "request": {
             "method": "GET",
@@ -199,6 +346,55 @@
           }]
         },
         {
+          "name": "Gestor solicita sugestao de IA",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+            "url": "{{baseUrl}}/api/Idea/{{ideaId}}/ai-score"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Retorna sugestao (200) ou indisponibilidade tratada (502)', () => {",
+                "  pm.expect([200, 502]).to.include(pm.response.code);",
+                "});",
+                "if (pm.response.code === 200) {",
+                "  const body = pm.response.json();",
+                "  pm.expect(body.impactScore).to.be.within(0, 10);",
+                "  pm.expect(body.feasibilityScore).to.be.within(0, 10);",
+                "  pm.expect(body.alignmentScore).to.be.within(0, 10);",
+                "}"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Operador tenta solicitar sugestao de IA - 403",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{operatorToken}}" }],
+            "url": "{{baseUrl}}/api/Idea/{{ideaId}}/ai-score"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Operador bloqueado na sugestao de IA', () => pm.response.to.have.status(403));"] }
+          }]
+        },
+        {
+          "name": "Gestor solicita sugestao de IA para ideia inexistente - 404",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+            "url": "{{baseUrl}}/api/Idea/000000000000000000000000/ai-score"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Ideia inexistente retorna 404', () => pm.response.to.have.status(404));"] }
+          }]
+        },
+        {
           "name": "Gestor aprova ideia criada - 200",
           "request": {
             "method": "PATCH",
@@ -221,6 +417,105 @@
                 "pm.expect(pm.response.json().status).to.eql('Approved');"
               ]
             }
+          }]
+        },
+        {
+          "name": "Operador tenta editar ideia ja avaliada - 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{operatorToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Nao deveria mudar\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Idea/{{ideaId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Edicao pos-avaliacao bloqueada', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "Operador tenta excluir ideia ja avaliada - 400",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{operatorToken}}" }],
+            "url": "{{baseUrl}}/api/Idea/{{ideaId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Exclusao pos-avaliacao bloqueada', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "Gestor prioriza ideia - 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"High\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Idea/{{ideaId2}}/prioritize"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Ideia priorizada com 200', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().priority).to.eql('High');"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Operador tenta priorizar ideia - 403",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{operatorToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"Low\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Idea/{{ideaId2}}/prioritize"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Operador bloqueado na priorizacao', () => pm.response.to.have.status(403));"] }
+          }]
+        },
+        {
+          "name": "Operador exclui a propria ideia - 204",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{operatorToken}}" }],
+            "url": "{{baseUrl}}/api/Idea/{{ideaId2}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Ideia excluida com 204', () => pm.response.to.have.status(204));"] }
+          }]
+        },
+        {
+          "name": "Operador consulta ideia excluida - 404",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{operatorToken}}" }],
+            "url": "{{baseUrl}}/api/Idea/{{ideaId2}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Ideia excluida some da consulta', () => pm.response.to.have.status(404));"] }
           }]
         },
         {
@@ -287,6 +582,112 @@
           "event": [{
             "listen": "test",
             "script": { "type": "text/javascript", "exec": ["pm.test('Gestor consulta projeto', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Gestor tenta investimento negativo - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Nao deve ser criado\",\n  \"description\": \"Validacao de investimento negativo.\",\n  \"division\": \"Passageiros\",\n  \"investment\": -1,\n  \"startDate\": \"2026-09-10T00:00:00Z\",\n  \"deadline\": \"2026-12-20T23:59:59Z\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Project"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Investimento negativo retorna 400', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "Gestor tenta prazo anterior ao inicio - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Nao deve ser criado\",\n  \"description\": \"Validacao de prazo invalido.\",\n  \"division\": \"Passageiros\",\n  \"investment\": 1000,\n  \"startDate\": \"2026-09-10T00:00:00Z\",\n  \"deadline\": \"2026-01-01T00:00:00Z\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Project"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Prazo anterior ao inicio retorna 400', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "Gestor tenta progresso invalido - 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"progressPercent\": 150\n}"
+            },
+            "url": "{{baseUrl}}/api/Project/{{projectId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Progresso invalido retorna 400', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "Gestor tenta transicao de status invalida - 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/Project/{{projectId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Transicao de status invalida retorna 400', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "Gestor arquiva projeto - 204",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+            "url": "{{baseUrl}}/api/Project/{{projectId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Projeto arquivado com 204', () => pm.response.to.have.status(204));"] }
+          }]
+        },
+        {
+          "name": "Gestor consulta projeto arquivado - 200",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+            "url": "{{baseUrl}}/api/Project/{{projectId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Projeto arquivado ainda pode ser consultado por id', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().isArchived).to.eql(true);"
+              ]
+            }
           }]
         },
         {
@@ -527,7 +928,55 @@
           },
           "event": [{
             "listen": "test",
-            "script": { "type": "text/javascript", "exec": ["pm.test('Lider acessa dashboard', () => pm.response.to.have.status(200));"] }
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Lider acessa dashboard', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().guidelineBreakdown).to.be.an('array');"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Lider consulta dashboard por diretriz - 200",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{leaderToken}}" }],
+            "url": "{{baseUrl}}/api/Dashboard/guideline/{{guidelineId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Dashboard por diretriz retorna 200', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().guidelineTitle).to.be.a('string');"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Gestor tenta dashboard por diretriz - 403",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+            "url": "{{baseUrl}}/api/Dashboard/guideline/{{guidelineId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Gestor bloqueado no drill-down', () => pm.response.to.have.status(403));"] }
+          }]
+        },
+        {
+          "name": "Lider consulta dashboard por projeto arquivado - 200",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{leaderToken}}" }],
+            "url": "{{baseUrl}}/api/Dashboard/project/{{projectId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Dashboard por projeto retorna 200', () => pm.response.to.have.status(200));"] }
           }]
         },
         {
