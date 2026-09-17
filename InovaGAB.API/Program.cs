@@ -62,6 +62,15 @@ builder.Services.AddSingleton<IMongoDatabase>(
 
 builder.Services.AddSingleton<MongoDbContext>();
 
+// ── IA (Gemini)
+builder.Services
+    .AddOptions<GeminiSettings>()
+    .Bind(
+        builder.Configuration.GetSection(
+            GeminiSettings.SectionName));
+
+builder.Services.AddHttpClient<IAiScoringService, AiScoringService>();
+
 // ── JWT
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 
@@ -185,3 +194,8 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// permite referenciar a aplicação a partir de WebApplicationFactory<Program> nos testes
+public partial class Program
+{
+}

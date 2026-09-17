@@ -28,6 +28,8 @@ services:
       - Jwt__Key=${JWT_KEY}
       - Jwt__Issuer=InovaGAB.API
       - Jwt__Audience=InovaGAB.App
+      - Gemini__ApiKey=${GEMINI_API_KEY}
+      - Gemini__Model=${GEMINI_MODEL}
     depends_on:
       mongo:
         condition: service_healthy
