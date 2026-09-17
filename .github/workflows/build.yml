@@ -12,6 +12,17 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -25,3 +36,11 @@ jobs:
 
       - name: Build
         run: dotnet build InovaGAB.API/InovaGAB.API.csproj --no-restore -c Release
+
+      - name: Restore test dependencies
+        run: dotnet restore InovaGAB.API.Tests/InovaGAB.API.Tests.csproj
+
+      - name: Run automated tests
+        env:
+          MONGO_TEST_CONNECTION_STRING: mongodb://localhost:27017
+        run: dotnet test InovaGAB.API.Tests/InovaGAB.API.Tests.csproj --no-restore -c Release --logger "console;verbosity=normal"
