@@ -83,7 +83,10 @@ public static class DataSeeder
                     "Foco em iniciativas que gerem economia direta na operação. Meta: -15% até dez/26.",
                 Priority = GuidelinePriority.High,
                 Category = "Financeiro",
+                Campaign = "InovaGAB 2026",
                 IsActive = true,
+                IsCurrent = true,
+                Version = 1,
                 CreatedById = leader.Id,
                 CreatedAt = DateTime.UtcNow
             },
@@ -94,7 +97,10 @@ public static class DataSeeder
                     "Priorizar soluções mobile e automações de processo nos setores de passageiros e comércio.",
                 Priority = GuidelinePriority.High,
                 Category = "Inovação",
+                Campaign = "InovaGAB 2026",
                 IsActive = true,
+                IsCurrent = true,
+                Version = 1,
                 CreatedById = leader.Id,
                 CreatedAt = DateTime.UtcNow
             },
@@ -105,14 +111,25 @@ public static class DataSeeder
                     "Ampliar a participação ativa no InovaGAB. Meta: 30% dos colaboradores com ao menos 1 ideia.",
                 Priority = GuidelinePriority.Medium,
                 Category = "Pessoas",
+                Campaign = "Semana da Inovação",
                 IsActive = true,
+                IsCurrent = true,
+                Version = 1,
                 CreatedById = leader.Id,
                 CreatedAt = DateTime.UtcNow
             }
         };
 
+        // A primeira versão de cada linha de histórico é raiz de si mesma.
+        foreach (var guideline in guidelines)
+        {
+            guideline.RootId = guideline.Id;
+        }
+
         await context.StrategicGuidelines
             .InsertManyAsync(guidelines);
+
+        var costGuideline = guidelines[0];
 
         var challenge = new Challenge
         {
@@ -141,6 +158,7 @@ public static class DataSeeder
             AlignmentScore = 10,
             UserId = operator1.Id,
             ChallengeId = challenge.Id,
+            GuidelineId = costGuideline.Id,
             CreatedAt = DateTime.UtcNow.AddDays(-12),
             UpdatedAt = DateTime.UtcNow.AddDays(-12)
         };
@@ -196,6 +214,7 @@ public static class DataSeeder
             ProgressPercent = 65,
             ManagerId = manager.Id,
             IdeaId = idea1.Id,
+            GuidelineId = costGuideline.Id,
             CreatedAt = DateTime.UtcNow.AddDays(-30)
         };
 

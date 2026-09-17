@@ -1,4 +1,4 @@
-﻿using MongoDB.Bson;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace InovaGAB.API.Models
@@ -18,7 +18,21 @@ namespace InovaGAB.API.Models
 
         public string Category { get; set; } = string.Empty;
 
+        public string Campaign { get; set; } = string.Empty;
+
         public bool IsActive { get; set; } = true;
+
+        // true somente na versão vigente da linha de histórico (RootId)
+        public bool IsCurrent { get; set; } = true;
+
+        public int Version { get; set; } = 1;
+
+        // id da primeira versão da linha; igual ao próprio Id na criação
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string RootId { get; set; } = string.Empty;
+
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? PreviousVersionId { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

@@ -17,6 +17,14 @@ namespace InovaGAB.API.Models
 
         public IdeaStatus Status { get; set; } = IdeaStatus.Submitted;
 
+        // prioridade de triagem definida pelo Manager, sem relação com GuidelinePriority
+        public IdeaPriority Priority { get; set; } = IdeaPriority.Medium;
+
+        // exclusão lógica (ver decisão no README)
+        public bool IsDeleted { get; set; } = false;
+
+        public DateTime? DeletedAt { get; set; }
+
         public int ImpactScore { get; set; } = 0;
 
         public int FeasibilityScore { get; set; } = 0;
@@ -44,6 +52,12 @@ namespace InovaGAB.API.Models
 
         [BsonIgnore]
         public Challenge? Challenge { get; set; }
+
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? GuidelineId { get; set; }
+
+        [BsonIgnore]
+        public StrategicGuideline? Guideline { get; set; }
     }
 
     public enum IdeaStatus
@@ -52,5 +66,13 @@ namespace InovaGAB.API.Models
         UnderReview,
         Approved,
         Rejected
+    }
+
+    public enum IdeaPriority
+    {
+        Low,
+        Medium,
+        High,
+        Critical
     }
 }

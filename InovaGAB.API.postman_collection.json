@@ -128,7 +128,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Ideia automatizada {{$timestamp}}\",\n  \"description\": \"Ideia criada pela collection de regressao do Postman.\",\n  \"division\": \"Passageiros\",\n  \"evidenceUrl\": null,\n  \"challengeId\": null\n}"
+              "raw": "{\n  \"title\": \"Ideia automatizada {{$timestamp}}\",\n  \"description\": \"Ideia criada pela collection de regressao do Postman.\",\n  \"division\": \"Passageiros\",\n  \"evidenceUrl\": null,\n  \"challengeId\": null,\n  \"guidelineId\": null\n}"
             },
             "url": "{{baseUrl}}/api/Idea"
           },
@@ -233,7 +233,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Projeto automatizado {{$timestamp}}\",\n  \"description\": \"Projeto criado pela collection de regressao.\",\n  \"division\": \"Passageiros\",\n  \"investment\": 25000,\n  \"startDate\": \"2026-09-10T00:00:00Z\",\n  \"deadline\": \"2026-12-20T23:59:59Z\",\n  \"ideaId\": \"{{ideaId}}\"\n}"
+              "raw": "{\n  \"title\": \"Projeto automatizado {{$timestamp}}\",\n  \"description\": \"Projeto criado pela collection de regressao.\",\n  \"division\": \"Passageiros\",\n  \"investment\": 25000,\n  \"startDate\": \"2026-09-10T00:00:00Z\",\n  \"deadline\": \"2026-12-20T23:59:59Z\",\n  \"ideaId\": \"{{ideaId}}\",\n  \"guidelineId\": null\n}"
             },
             "url": "{{baseUrl}}/api/Project"
           },
@@ -365,7 +365,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Diretriz automatizada {{$timestamp}}\",\n  \"description\": \"Diretriz temporaria criada pela regressao.\",\n  \"category\": \"Tecnologia\",\n  \"priority\": \"High\"\n}"
+              "raw": "{\n  \"title\": \"Diretriz automatizada {{$timestamp}}\",\n  \"description\": \"Diretriz temporaria criada pela regressao.\",\n  \"category\": \"Tecnologia\",\n  \"campaign\": \"InovaGAB 2026\",\n  \"priority\": \"High\"\n}"
             },
             "url": "{{baseUrl}}/api/Guideline"
           },
@@ -376,7 +376,82 @@
               "exec": [
                 "pm.test('Diretriz criada com 201', () => pm.response.to.have.status(201));",
                 "const body = pm.response.json();",
+                "pm.expect(body.isCurrent).to.eql(true);",
+                "pm.expect(body.version).to.eql(1);",
                 "pm.collectionVariables.set('guidelineId', body.id);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Operador cria ideia com diretriz valida - 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{operatorToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ideia vinculada a diretriz {{$timestamp}}\",\n  \"description\": \"Ideia criada para validar o vinculo com a diretriz.\",\n  \"division\": \"Passageiros\",\n  \"evidenceUrl\": null,\n  \"challengeId\": null,\n  \"guidelineId\": \"{{guidelineId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Idea"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Ideia com diretriz criada com 201', () => pm.response.to.have.status(201));",
+                "const body = pm.response.json();",
+                "pm.expect(body.guidelineId).to.eql(pm.collectionVariables.get('guidelineId'));",
+                "pm.expect(body.guideline.id).to.eql(pm.collectionVariables.get('guidelineId'));"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Operador cria ideia com diretriz inexistente - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{operatorToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Nao deve ser criada\",\n  \"description\": \"Validacao de diretriz inexistente.\",\n  \"division\": \"Passageiros\",\n  \"evidenceUrl\": null,\n  \"challengeId\": null,\n  \"guidelineId\": \"000000000000000000000000\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Idea"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": ["pm.test('Diretriz inexistente retorna 400', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "Gestor cria projeto com diretriz valida - 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Projeto vinculado a diretriz {{$timestamp}}\",\n  \"description\": \"Projeto criado para validar o vinculo com a diretriz.\",\n  \"division\": \"Passageiros\",\n  \"investment\": 10000,\n  \"startDate\": \"2026-09-10T00:00:00Z\",\n  \"deadline\": \"2026-12-20T23:59:59Z\",\n  \"ideaId\": \"{{ideaId}}\",\n  \"guidelineId\": \"{{guidelineId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/Project"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Projeto com diretriz criado com 201', () => pm.response.to.have.status(201));",
+                "const body = pm.response.json();",
+                "pm.expect(body.guidelineId).to.eql(pm.collectionVariables.get('guidelineId'));",
+                "pm.expect(body.guideline.id).to.eql(pm.collectionVariables.get('guidelineId'));"
               ]
             }
           }]
@@ -391,13 +466,44 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Diretriz automatizada atualizada\",\n  \"description\": \"Diretriz atualizada pela regressao.\",\n  \"category\": \"Transformacao Digital\",\n  \"priority\": \"Medium\"\n}"
+              "raw": "{\n  \"title\": \"Diretriz automatizada atualizada\",\n  \"description\": \"Diretriz atualizada pela regressao.\",\n  \"category\": \"Transformacao Digital\",\n  \"campaign\": \"InovaGAB 2026\",\n  \"priority\": \"Medium\"\n}"
             },
             "url": "{{baseUrl}}/api/Guideline/{{guidelineId}}"
           },
           "event": [{
             "listen": "test",
-            "script": { "type": "text/javascript", "exec": ["pm.test('Diretriz atualizada', () => pm.response.to.have.status(200));"] }
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Diretriz atualizada gera nova versao', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.expect(body.version).to.eql(2);",
+                "pm.expect(body.isCurrent).to.eql(true);",
+                "pm.expect(body.previousVersionId).to.eql(pm.collectionVariables.get('guidelineId'));",
+                "pm.collectionVariables.set('guidelineId', body.id);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Lider consulta historico da diretriz - 200",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{leaderToken}}" }],
+            "url": "{{baseUrl}}/api/Guideline/{{guidelineId}}/history"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Historico da diretriz retorna 200', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.expect(body.length).to.be.at.least(2);",
+                "pm.expect(body[0].isCurrent).to.eql(true);",
+                "pm.expect(body[body.length - 1].version).to.eql(1);"
+              ]
+            }
           }]
         },
         {

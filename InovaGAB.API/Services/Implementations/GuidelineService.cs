@@ -1,4 +1,4 @@
-﻿using InovaGAB.API.Data;
+using InovaGAB.API.Data;
 using InovaGAB.API.DTOs.Request;
 using InovaGAB.API.DTOs.Response;
 using InovaGAB.API.Models;
@@ -35,12 +35,17 @@ public class GuidelineService : IGuidelineService
             Title = request.Title,
             Description = request.Description,
             Category = request.Category,
+            Campaign = request.Campaign,
             Priority = ParsePriority(request.Priority),
             CreatedById = userId,
             CreatedBy = creator,
             IsActive = true,
+            IsCurrent = true,
+            Version = 1,
             CreatedAt = DateTime.UtcNow
         };
+
+        guideline.RootId = guideline.Id;
 
         await _context.StrategicGuidelines
             .InsertOneAsync(guideline);
@@ -50,15 +55,14 @@ public class GuidelineService : IGuidelineService
 
     public async Task<List<GuidelineResponse>> GetAllAsync()
     {
+        // lista só a versão vigente de cada linha de histórico
         var guidelines = await _context.StrategicGuidelines
-            .Find(guideline => guideline.IsActive)
+            .Find(guideline =>
+                guideline.IsActive && guideline.IsCurrent)
             .SortByDescending(guideline => guideline.CreatedAt)
             .ToListAsync();
 
-        foreach (var guideline in guidelines)
-        {
-            await LoadCreatorAsync(guideline);
-        }
+        await LoadCreatorsAsync(guidelines);
 
         return guidelines
             .Select(MapToResponse)
@@ -82,40 +86,90 @@ public class GuidelineService : IGuidelineService
         return MapToResponse(guideline);
     }
 
-    public async Task<GuidelineResponse?> UpdateAsync(
-        string id,
-        CreateGuidelineRequest request)
+    public async Task<List<GuidelineResponse>?> GetHistoryAsync(
+        string id)
     {
-        var guideline = await _context.StrategicGuidelines
+        var reference = await _context.StrategicGuidelines
             .Find(guideline => guideline.Id == id)
             .FirstOrDefaultAsync();
 
-        if (guideline == null)
+        if (reference == null)
         {
             return null;
         }
 
-        guideline.Title = request.Title;
-        guideline.Description = request.Description;
-        guideline.Category = request.Category;
-        guideline.Priority =
-            ParsePriority(request.Priority);
-        guideline.UpdatedAt = DateTime.UtcNow;
+        var rootId = GetEffectiveRootId(reference);
 
-        var updateResult =
-            await _context.StrategicGuidelines.ReplaceOneAsync(
-                existingGuideline =>
-                    existingGuideline.Id == id,
-                guideline);
+        var history = await _context.StrategicGuidelines
+            .Find(guideline =>
+                guideline.RootId == rootId || guideline.Id == rootId)
+            .SortByDescending(guideline => guideline.Version)
+            .ToListAsync();
 
-        if (updateResult.MatchedCount == 0)
+        await LoadCreatorsAsync(history);
+
+        return history
+            .Select(MapToResponse)
+            .ToList();
+    }
+
+    public async Task<GuidelineResponse?> UpdateAsync(
+        string id,
+        CreateGuidelineRequest request,
+        string userId)
+    {
+        var current = await _context.StrategicGuidelines
+            .Find(guideline => guideline.Id == id)
+            .FirstOrDefaultAsync();
+
+        if (current == null)
         {
             return null;
         }
 
-        await LoadCreatorAsync(guideline);
+        var editor = await _context.Users
+            .Find(user => user.Id == userId)
+            .FirstOrDefaultAsync();
 
-        return MapToResponse(guideline);
+        if (editor == null)
+        {
+            throw new InvalidOperationException(
+                "Usuário responsável não encontrado.");
+        }
+
+        // cria uma nova versão vigente em vez de sobrescrever a atual,
+        // preservando o histórico
+        var newVersion = new StrategicGuideline
+        {
+            Title = request.Title,
+            Description = request.Description,
+            Category = request.Category,
+            Campaign = request.Campaign,
+            Priority = ParsePriority(request.Priority),
+            IsActive = true,
+            IsCurrent = true,
+            Version = current.Version + 1,
+            RootId = GetEffectiveRootId(current),
+            PreviousVersionId = current.Id,
+            CreatedById = userId,
+            CreatedBy = editor,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        // rebaixa a versão atual antes de inserir a nova: o índice único
+        // (rootId + isCurrent) não permite duas vigentes ao mesmo tempo
+        var supersede = Builders<StrategicGuideline>.Update
+            .Set(guideline => guideline.IsCurrent, false)
+            .Set(guideline => guideline.UpdatedAt, DateTime.UtcNow);
+
+        await _context.StrategicGuidelines.UpdateOneAsync(
+            guideline => guideline.Id == current.Id,
+            supersede);
+
+        await _context.StrategicGuidelines
+            .InsertOneAsync(newVersion);
+
+        return MapToResponse(newVersion);
     }
 
     public async Task<bool> DeleteAsync(string id)
@@ -134,6 +188,14 @@ public class GuidelineService : IGuidelineService
         return result.MatchedCount > 0;
     }
 
+    private static string GetEffectiveRootId(
+        StrategicGuideline guideline)
+    {
+        return string.IsNullOrEmpty(guideline.RootId)
+            ? guideline.Id
+            : guideline.RootId;
+    }
+
     private async Task LoadCreatorAsync(
         StrategicGuideline guideline)
     {
@@ -144,6 +206,37 @@ public class GuidelineService : IGuidelineService
         if (creator != null)
         {
             guideline.CreatedBy = creator;
+        }
+    }
+
+    private async Task LoadCreatorsAsync(
+        List<StrategicGuideline> guidelines)
+    {
+        var creatorIds = guidelines
+            .Select(guideline => guideline.CreatedById)
+            .Distinct()
+            .ToList();
+
+        if (creatorIds.Count == 0)
+        {
+            return;
+        }
+
+        var creators = await _context.Users
+            .Find(user => creatorIds.Contains(user.Id))
+            .ToListAsync();
+
+        var creatorsById = creators
+            .ToDictionary(user => user.Id);
+
+        foreach (var guideline in guidelines)
+        {
+            if (creatorsById.TryGetValue(
+                    guideline.CreatedById,
+                    out var creator))
+            {
+                guideline.CreatedBy = creator;
+            }
         }
     }
 
@@ -171,8 +264,13 @@ public class GuidelineService : IGuidelineService
             Title = guideline.Title,
             Description = guideline.Description,
             Category = guideline.Category,
+            Campaign = guideline.Campaign,
             Priority = guideline.Priority.ToString(),
             IsActive = guideline.IsActive,
+            IsCurrent = guideline.IsCurrent,
+            Version = guideline.Version,
+            RootId = GetEffectiveRootId(guideline),
+            PreviousVersionId = guideline.PreviousVersionId,
             CreatedAt = guideline.CreatedAt,
             CreatedByName =
                 guideline.CreatedBy?.Name ?? string.Empty

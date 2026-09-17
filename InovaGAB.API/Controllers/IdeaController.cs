@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using InovaGAB.API.DTOs.Request;
 using InovaGAB.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -12,10 +12,14 @@ namespace InovaGAB.API.Controllers
     public class IdeaController : ControllerBase
     {
         private readonly IIdeaService _ideaService;
+        private readonly IAiScoringService _aiScoringService;
 
-        public IdeaController(IIdeaService ideaService)
+        public IdeaController(
+            IIdeaService ideaService,
+            IAiScoringService aiScoringService)
         {
             _ideaService = ideaService;
+            _aiScoringService = aiScoringService;
         }
 
         [HttpPost]
@@ -31,7 +35,7 @@ namespace InovaGAB.API.Controllers
                 userId);
 
             return CreatedAtAction(
-                nameof(Create),
+                nameof(GetById),
                 new { id = response.Id },
                 response);
         }
@@ -55,6 +59,103 @@ namespace InovaGAB.API.Controllers
             var ideas = await _ideaService.GetAllAsync();
 
             return Ok(ideas);
+        }
+
+        [HttpGet("{id}")]
+        [Authorize(Roles = "Operator,Manager,Leader")]
+        public async Task<IActionResult> GetById(string id)
+        {
+            var idea = await _ideaService.GetByIdAsync(id);
+
+            if (idea == null)
+            {
+                return NotFound();
+            }
+
+            if (IsOperatorNotOwner(idea.UserId))
+            {
+                throw new UnauthorizedAccessException(
+                    "Você só pode consultar as próprias ideias.");
+            }
+
+            return Ok(idea);
+        }
+
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Operator")]
+        public async Task<IActionResult> Update(
+            string id,
+            [FromBody] UpdateIdeaRequest request)
+        {
+            var userId =
+                User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var result = await _ideaService.UpdateAsync(
+                id,
+                request,
+                userId);
+
+            if (result == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(result);
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Operator")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            var userId =
+                User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var result = await _ideaService.DeleteAsync(
+                id,
+                userId);
+
+            if (result != true)
+            {
+                return NotFound();
+            }
+
+            return NoContent();
+        }
+
+        [HttpPatch("{id}/prioritize")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> Prioritize(
+            string id,
+            [FromBody] PrioritizeIdeaRequest request)
+        {
+            var result = await _ideaService.PrioritizeAsync(
+                id,
+                request.Priority);
+
+            if (result == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(result);
+        }
+
+        [HttpPost("{id}/ai-score")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> SuggestAiScore(
+            string id,
+            CancellationToken cancellationToken)
+        {
+            var suggestion = await _aiScoringService.SuggestScoreAsync(
+                id,
+                cancellationToken);
+
+            if (suggestion == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(suggestion);
         }
 
         [HttpPatch("{id}/approve")]
@@ -89,6 +190,19 @@ namespace InovaGAB.API.Controllers
             }
 
             return Ok(result);
+        }
+
+        private bool IsOperatorNotOwner(string ideaUserId)
+        {
+            if (!User.IsInRole("Operator"))
+            {
+                return false;
+            }
+
+            var userId =
+                User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            return userId != ideaUserId;
         }
     }
 }

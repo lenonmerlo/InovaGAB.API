@@ -177,6 +177,8 @@ A aplicação cria os índices necessários durante a inicialização, incluindo
 - usuário, desafio e status de ideias;
 - gestor, ideia e status de projetos;
 - diretrizes ativas por data;
+- diretrizes por linha de histórico (`rootId`), com índice único parcial garantindo uma única versão vigente (`isCurrent = true`) por linha;
+- `guidelineId` de ideias e projetos, para consultas e agregações por estratégia;
 - desafios ativos por prazo;
 - logs de auditoria por data.
 
@@ -205,6 +207,7 @@ Todos os campos `Id`, `UserId`, `ManagerId`, `IdeaId`, `ChallengeId` e `CreatedB
 | `Id` | string/ObjectId | Identificador |
 | `UserId` | string/ObjectId | Autor da ideia |
 | `ChallengeId` | string/ObjectId? | Desafio opcional |
+| `GuidelineId` | string/ObjectId? | Diretriz estratégica vinculada (opcional) |
 | `Status` | IdeaStatus | `Submitted`, `UnderReview`, `Approved` ou `Rejected` |
 | `ImpactScore` | int | Impacto de 0 a 10 |
 | `FeasibilityScore` | int | Viabilidade de 0 a 10 |
@@ -218,6 +221,7 @@ Todos os campos `Id`, `UserId`, `ManagerId`, `IdeaId`, `ChallengeId` e `CreatedB
 | `Id` | string/ObjectId | Identificador |
 | `ManagerId` | string/ObjectId | Gestor responsável |
 | `IdeaId` | string/ObjectId? | Ideia de origem |
+| `GuidelineId` | string/ObjectId? | Diretriz estratégica vinculada (opcional) |
 | `Status` | ProjectStatus | Estado do projeto |
 | `Stage` | ProjectStage | Etapa atual |
 | `Investment` | Decimal128 | Investimento |
@@ -225,6 +229,24 @@ Todos os campos `Id`, `UserId`, `ManagerId`, `IdeaId`, `ChallengeId` e `CreatedB
 | `Roi` | decimal | ROI calculado, não persistido |
 | `ProductivityGain` | int | Ganho de produtividade |
 | `ProgressPercent` | int | Progresso de 0 a 100 |
+
+### StrategicGuideline
+
+Representa uma diretriz estratégica **versionada**: cada atualização gera um novo documento (nova versão), preservando o anterior como histórico. Nenhuma atualização apaga ou sobrescreve uma versão já existente.
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `Id` | string/ObjectId | Identificador desta versão |
+| `RootId` | string/ObjectId | Identificador da primeira versão da linha de histórico; igual em todas as versões geradas a partir dela |
+| `PreviousVersionId` | string/ObjectId? | Versão anterior desta linha, quando esta versão veio de uma atualização |
+| `Version` | int | Número sequencial da versão dentro da linha, começando em 1 |
+| `IsCurrent` | bool | `true` somente na versão vigente da linha; garantido único por `RootId` via índice |
+| `IsActive` | bool | `false` quando a diretriz foi desativada (exclusão lógica) |
+| `Category` | string | Categoria da diretriz |
+| `Campaign` | string | Campanha institucional vinculada (ex.: "InovaGAB 2026") |
+| `Priority` | GuidelinePriority | `Low`, `Medium` ou `High` |
+
+Ao atualizar uma diretriz (`PUT /api/Guideline/{id}`), a API cria uma nova versão vigente e marca a versão anterior como `IsCurrent = false`, sem excluí-la — o histórico completo continua disponível em `GET /api/Guideline/{id}/history`. `GET /api/Guideline` lista apenas as versões vigentes (`IsActive && IsCurrent`), garantindo que a estratégia atual de cada linha seja sempre inequívoca.
 
 ## Autenticação e autorização
 
@@ -316,11 +338,12 @@ Criação:
   "description": "Reduzir tempo manual usando automação.",
   "division": "Operações",
   "evidenceUrl": "https://example.com/evidencia",
-  "challengeId": "66d1234567890abcdef12345"
+  "challengeId": "66d1234567890abcdef12345",
+  "guidelineId": "66d1234567890abcdef54321"
 }
 ```
 
-`challengeId` é opcional e pode ser `null`.
+`challengeId` e `guidelineId` são opcionais e podem ser `null`. Quando informado, `guidelineId` deve apontar para uma diretriz existente e ativa (`400 Bad Request` caso contrário). A resposta traz `guidelineId` e um resumo em `guideline` (`id`, `title`, `category`, `campaign`, `isActive`), sem exigir uma consulta adicional a `GET /api/Guideline/{id}`.
 
 Aprovação:
 
@@ -351,11 +374,12 @@ Criação:
   "investment": 50000,
   "startDate": "2026-09-10T00:00:00Z",
   "deadline": "2026-12-20T23:59:59Z",
-  "ideaId": "66d1234567890abcdef12345"
+  "ideaId": "66d1234567890abcdef12345",
+  "guidelineId": "66d1234567890abcdef54321"
 }
 ```
 
-`ideaId` é opcional e pode ser `null`.
+`ideaId` e `guidelineId` são opcionais e podem ser `null`. Quando informado, `guidelineId` deve apontar para uma diretriz existente e ativa (`400 Bad Request` caso contrário). A resposta traz `guidelineId` e um resumo em `guideline`, sem exigir uma consulta adicional.
 
 Atualização:
 
@@ -365,9 +389,12 @@ Atualização:
   "stage": 1,
   "financialReturn": 150000,
   "productivityGain": 30,
-  "progressPercent": 65
+  "progressPercent": 65,
+  "guidelineId": "66d1234567890abcdef54321"
 }
 ```
+
+`guidelineId` na atualização é opcional; quando enviado, substitui o vínculo atual do projeto (mesma validação de existência e diretriz ativa).
 
 ### Desafios
 
@@ -382,11 +409,26 @@ Atualização:
 
 | Método | Rota | Acesso | Descrição |
 | --- | --- | --- | --- |
-| POST | `/api/Guideline` | Leader | Cria uma diretriz |
-| GET | `/api/Guideline` | Autenticado | Lista diretrizes ativas |
-| GET | `/api/Guideline/{id}` | Autenticado | Detalha uma diretriz |
-| PUT | `/api/Guideline/{id}` | Leader | Atualiza uma diretriz |
-| DELETE | `/api/Guideline/{id}` | Leader | Desativa uma diretriz |
+| POST | `/api/Guideline` | Leader | Cria uma diretriz (nova linha de histórico) |
+| GET | `/api/Guideline` | Autenticado | Lista apenas as versões vigentes das diretrizes ativas |
+| GET | `/api/Guideline/{id}` | Autenticado | Detalha uma diretriz por Id (qualquer versão) |
+| GET | `/api/Guideline/{id}/history` | Autenticado | Lista o histórico completo da linha da diretriz, da versão mais recente para a mais antiga |
+| PUT | `/api/Guideline/{id}` | Leader | Cria uma nova versão vigente a partir da diretriz informada, preservando a anterior como histórico |
+| DELETE | `/api/Guideline/{id}` | Leader | Desativa logicamente a diretriz (`IsActive = false`) |
+
+Criação/atualização:
+
+```json
+{
+  "title": "Redução de Custos Operacionais",
+  "description": "Foco em iniciativas que gerem economia direta na operação.",
+  "category": "Financeiro",
+  "campaign": "InovaGAB 2026",
+  "priority": "High"
+}
+```
+
+Cada diretriz retornada traz `id`, `rootId`, `previousVersionId`, `version`, `isCurrent` e `isActive`, permitindo identificar de forma inequívoca a estratégia vigente de cada linha de histórico.
 
 ### Dashboard
 

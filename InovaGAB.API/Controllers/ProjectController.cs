@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using InovaGAB.API.DTOs.Request;
 using InovaGAB.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -77,6 +77,20 @@ namespace InovaGAB.API.Controllers
             }
 
             return Ok(result);
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            var result = await _projectService.ArchiveAsync(id);
+
+            if (result != true)
+            {
+                return NotFound();
+            }
+
+            return NoContent();
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using InovaGAB.API.Exceptions;
+using Microsoft.AspNetCore.Mvc;
 
 namespace InovaGAB.API.Middleware;
 
@@ -37,12 +38,28 @@ public class ExceptionHandlingMiddleware
                 "Dados inválidos.",
                 exception.Message);
         }
+        catch (UnauthorizedAccessException exception)
+        {
+            await WriteProblemAsync(
+                context,
+                StatusCodes.Status403Forbidden,
+                "Acesso negado.",
+                exception.Message);
+        }
         catch (InvalidOperationException exception)
         {
             await WriteProblemAsync(
                 context,
                 StatusCodes.Status400BadRequest,
                 "Operação inválida.",
+                exception.Message);
+        }
+        catch (AiScoringUnavailableException exception)
+        {
+            await WriteProblemAsync(
+                context,
+                StatusCodes.Status502BadGateway,
+                "IA indisponível.",
                 exception.Message);
         }
         catch (Exception exception)

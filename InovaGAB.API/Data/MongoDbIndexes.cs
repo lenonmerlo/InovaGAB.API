@@ -41,6 +41,13 @@ public static class MongoDbIndexes
                     new CreateIndexOptions
                     {
                         Name = "ix_ideas_status"
+                    }),
+                new CreateIndexModel<Idea>(
+                    Builders<Idea>.IndexKeys
+                        .Ascending(idea => idea.GuidelineId),
+                    new CreateIndexOptions
+                    {
+                        Name = "ix_ideas_guidelineId"
                     })
             });
 
@@ -67,22 +74,54 @@ public static class MongoDbIndexes
                     new CreateIndexOptions
                     {
                         Name = "ix_projects_status"
+                    }),
+                new CreateIndexModel<Project>(
+                    Builders<Project>.IndexKeys
+                        .Ascending(project => project.GuidelineId),
+                    new CreateIndexOptions
+                    {
+                        Name = "ix_projects_guidelineId"
                     })
             });
 
         await context.StrategicGuidelines.Indexes
-            .CreateOneAsync(
-                new CreateIndexModel<StrategicGuideline>(
-                    Builders<StrategicGuideline>.IndexKeys
-                        .Ascending(guideline =>
-                            guideline.IsActive)
-                        .Descending(guideline =>
-                            guideline.CreatedAt),
-                    new CreateIndexOptions
-                    {
-                        Name =
-                            "ix_guidelines_active_createdAt"
-                    }));
+            .CreateManyAsync(
+                new[]
+                {
+                    new CreateIndexModel<StrategicGuideline>(
+                        Builders<StrategicGuideline>.IndexKeys
+                            .Ascending(guideline =>
+                                guideline.IsActive)
+                            .Descending(guideline =>
+                                guideline.CreatedAt),
+                        new CreateIndexOptions
+                        {
+                            Name =
+                                "ix_guidelines_active_createdAt"
+                        }),
+                    new CreateIndexModel<StrategicGuideline>(
+                        Builders<StrategicGuideline>.IndexKeys
+                            .Ascending(guideline =>
+                                guideline.RootId),
+                        new CreateIndexOptions
+                        {
+                            Name = "ix_guidelines_rootId"
+                        }),
+                    // garante que só exista uma versão vigente por linha de histórico
+                    new CreateIndexModel<StrategicGuideline>(
+                        Builders<StrategicGuideline>.IndexKeys
+                            .Ascending(guideline => guideline.RootId),
+                        new CreateIndexOptions<StrategicGuideline>
+                        {
+                            Name = "ux_guidelines_rootId_current",
+                            Unique = true,
+                            PartialFilterExpression =
+                                Builders<StrategicGuideline>.Filter
+                                    .Eq(
+                                        guideline => guideline.IsCurrent,
+                                        true)
+                        })
+                });
 
         await context.Challenges.Indexes.CreateOneAsync(
             new CreateIndexModel<Challenge>(

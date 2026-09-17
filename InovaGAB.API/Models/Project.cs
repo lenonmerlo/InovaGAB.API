@@ -26,10 +26,7 @@ namespace InovaGAB.API.Models
         public decimal FinancialReturn { get; set; } = 0;
 
         [BsonIgnore]
-        public decimal Roi =>
-            Investment > 0
-                ? (FinancialReturn - Investment) / Investment * 100
-                : 0;
+        public decimal Roi => RoiCalculator.Calculate(Investment, FinancialReturn);
 
         public int ProductivityGain { get; set; } = 0;
 
@@ -54,6 +51,17 @@ namespace InovaGAB.API.Models
 
         [BsonIgnore]
         public Idea? Idea { get; set; }
+
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? GuidelineId { get; set; }
+
+        [BsonIgnore]
+        public StrategicGuideline? Guideline { get; set; }
+
+        // arquivamento lógico (ver decisão no README)
+        public bool IsArchived { get; set; } = false;
+
+        public DateTime? ArchivedAt { get; set; }
     }
 
     public enum ProjectStatus

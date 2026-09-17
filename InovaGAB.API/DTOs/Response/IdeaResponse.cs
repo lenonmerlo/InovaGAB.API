@@ -1,4 +1,4 @@
-﻿namespace InovaGAB.API.DTOs.Response
+namespace InovaGAB.API.DTOs.Response
 {
     public class IdeaResponse
     {
@@ -7,13 +7,17 @@
         public string Description { get; set; } = string.Empty;
         public string Division { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public string Priority { get; set; } = string.Empty;
         public int ImpactScore { get; set; }
         public int FeasibilityScore { get; set; }
         public int AlignmentScore { get; set; }
         public int TotalScore { get; set; }
         public string? EvidenceUrl { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string UserId { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
+        public string? GuidelineId { get; set; }
+        public GuidelineSummaryResponse? Guideline { get; set; }
 
     }
 }

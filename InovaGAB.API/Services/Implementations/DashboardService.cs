@@ -1,4 +1,4 @@
-﻿using InovaGAB.API.Data;
+using InovaGAB.API.Data;
 using InovaGAB.API.DTOs.Response;
 using InovaGAB.API.Models;
 using InovaGAB.API.Services.Interfaces;
@@ -22,25 +22,35 @@ public class DashboardService : IDashboardService
             .ToListAsync();
 
         var ideasTask = _context.Ideas
-            .Find(_ => true)
+            .Find(idea => !idea.IsDeleted)
             .ToListAsync();
 
         var usersTask = _context.Users
             .Find(_ => true)
             .ToListAsync();
 
+        var guidelinesTask = _context.StrategicGuidelines
+            .Find(_ => true)
+            .ToListAsync();
+
         await Task.WhenAll(
             projectsTask,
             ideasTask,
-            usersTask);
+            usersTask,
+            guidelinesTask);
 
         var projects = await projectsTask;
         var ideas = await ideasTask;
         var users = await usersTask;
+        var guidelines = await guidelinesTask;
 
         var usersById = users.ToDictionary(
             user => user.Id,
             user => user);
+
+        var guidelinesById = guidelines.ToDictionary(
+            guideline => guideline.Id,
+            guideline => guideline);
 
         foreach (var project in projects)
         {
@@ -49,6 +59,14 @@ public class DashboardService : IDashboardService
                     out var manager))
             {
                 project.Manager = manager;
+            }
+
+            if (project.GuidelineId != null &&
+                guidelinesById.TryGetValue(
+                    project.GuidelineId,
+                    out var guideline))
+            {
+                project.Guideline = guideline;
             }
         }
 
@@ -70,10 +88,9 @@ public class DashboardService : IDashboardService
         var totalFinancialReturn = projects.Sum(
             project => project.FinancialReturn);
 
-        var totalRoi = totalInvestment > 0
-            ? (totalFinancialReturn - totalInvestment)
-              / totalInvestment * 100
-            : 0;
+        var totalRoi = RoiCalculator.Calculate(
+            totalInvestment,
+            totalFinancialReturn);
 
         var productivityAverage = projects.Count > 0
             ? (int)projects.Average(
@@ -105,26 +122,7 @@ public class DashboardService : IDashboardService
         var topProjects = projects
             .OrderByDescending(project => project.Roi)
             .Take(3)
-            .Select(project => new ProjectResponse
-            {
-                Id = project.Id,
-                Title = project.Title,
-                Description = project.Description,
-                Division = project.Division,
-                Status = project.Status.ToString(),
-                Stage = project.Stage.ToString(),
-                Investment = project.Investment,
-                FinancialReturn = project.FinancialReturn,
-                Roi = project.Roi,
-                ProductivityGain = project.ProductivityGain,
-                StartDate = project.StartDate,
-                Deadline = project.Deadline,
-                ProgressPercent = project.ProgressPercent,
-                CreatedAt = project.CreatedAt,
-                ManagerName =
-                    project.Manager?.Name ?? string.Empty,
-                IdeaId = project.IdeaId
-            })
+            .Select(MapToProjectResponse)
             .ToList();
 
         var topContributors = users
@@ -141,6 +139,10 @@ public class DashboardService : IDashboardService
             })
             .ToList();
 
+        var guidelineBreakdown = BuildGuidelineBreakdown(
+            projects,
+            guidelinesById);
+
         return new DashboardResponse
         {
             TotalRoi = totalRoi,
@@ -151,7 +153,188 @@ public class DashboardService : IDashboardService
             DelayedProjects = delayedProjects,
             IdeaFunnel = funnel,
             TopProjects = topProjects,
-            TopContributors = topContributors
+            TopContributors = topContributors,
+            GuidelineBreakdown = guidelineBreakdown
+        };
+    }
+
+    public async Task<GuidelineDashboardDto?> GetByGuidelineAsync(
+        string guidelineId)
+    {
+        var reference = await _context.StrategicGuidelines
+            .Find(guideline => guideline.Id == guidelineId)
+            .FirstOrDefaultAsync();
+
+        if (reference == null)
+        {
+            return null;
+        }
+
+        var rootId = string.IsNullOrEmpty(reference.RootId)
+            ? reference.Id
+            : reference.RootId;
+
+        var guidelines = await _context.StrategicGuidelines
+            .Find(_ => true)
+            .ToListAsync();
+
+        var guidelinesById = guidelines.ToDictionary(
+            guideline => guideline.Id,
+            guideline => guideline);
+
+        var projects = await _context.Projects
+            .Find(_ => true)
+            .ToListAsync();
+
+        foreach (var project in projects)
+        {
+            if (project.GuidelineId != null &&
+                guidelinesById.TryGetValue(
+                    project.GuidelineId,
+                    out var guideline))
+            {
+                project.Guideline = guideline;
+            }
+        }
+
+        var groupProjects = projects
+            .Where(project => GetGroupRootId(project) == rootId)
+            .ToList();
+
+        var current = guidelines.FirstOrDefault(guideline =>
+            guideline.RootId == rootId && guideline.IsCurrent) ??
+            reference;
+
+        return BuildGroupDto(rootId, current, groupProjects);
+    }
+
+    private static List<GuidelineDashboardDto> BuildGuidelineBreakdown(
+        List<Project> projects,
+        Dictionary<string, StrategicGuideline> guidelinesById)
+    {
+        var groups = projects
+            .GroupBy(GetGroupRootId);
+
+        var breakdown = new List<GuidelineDashboardDto>();
+
+        foreach (var group in groups)
+        {
+            var rootId = group.Key;
+
+            StrategicGuideline? current = null;
+
+            if (rootId != null)
+            {
+                current = guidelinesById.Values.FirstOrDefault(
+                    guideline =>
+                        guideline.RootId == rootId &&
+                        guideline.IsCurrent);
+            }
+
+            breakdown.Add(BuildGroupDto(
+                rootId,
+                current,
+                group.ToList()));
+        }
+
+        return breakdown
+            .OrderByDescending(dto => dto.TotalInvestment)
+            .ToList();
+    }
+
+    private static GuidelineDashboardDto BuildGroupDto(
+        string? rootId,
+        StrategicGuideline? current,
+        List<Project> groupProjects)
+    {
+        var now = DateTime.UtcNow;
+
+        var totalInvestment = groupProjects.Sum(
+            project => project.Investment);
+
+        var totalFinancialReturn = groupProjects.Sum(
+            project => project.FinancialReturn);
+
+        var roi = RoiCalculator.Calculate(
+            totalInvestment,
+            totalFinancialReturn);
+
+        var productivityAverage = groupProjects.Count > 0
+            ? (int)groupProjects.Average(
+                project => project.ProductivityGain)
+            : 0;
+
+        var activeProjects = groupProjects.Count(project =>
+            project.Status == ProjectStatus.InProgress ||
+            project.Status == ProjectStatus.Planning);
+
+        var delayedProjects = groupProjects.Count(project =>
+            project.Deadline < now &&
+            project.Status != ProjectStatus.Completed &&
+            project.Status != ProjectStatus.Cancelled);
+
+        return new GuidelineDashboardDto
+        {
+            GuidelineId = rootId,
+            GuidelineTitle = current?.Title ?? "Sem diretriz",
+            Category = current?.Category ?? string.Empty,
+            Campaign = current?.Campaign ?? string.Empty,
+            ProjectCount = groupProjects.Count,
+            TotalInvestment = totalInvestment,
+            TotalFinancialReturn = totalFinancialReturn,
+            Roi = roi,
+            ProductivityGainAverage = productivityAverage,
+            ActiveProjects = activeProjects,
+            DelayedProjects = delayedProjects
+        };
+    }
+
+    private static string? GetGroupRootId(Project project)
+    {
+        if (project.Guideline == null)
+        {
+            return null;
+        }
+
+        return string.IsNullOrEmpty(project.Guideline.RootId)
+            ? project.Guideline.Id
+            : project.Guideline.RootId;
+    }
+
+    private static ProjectResponse MapToProjectResponse(
+        Project project)
+    {
+        return new ProjectResponse
+        {
+            Id = project.Id,
+            Title = project.Title,
+            Description = project.Description,
+            Division = project.Division,
+            Status = project.Status.ToString(),
+            Stage = project.Stage.ToString(),
+            Investment = project.Investment,
+            FinancialReturn = project.FinancialReturn,
+            Roi = project.Roi,
+            ProductivityGain = project.ProductivityGain,
+            StartDate = project.StartDate,
+            Deadline = project.Deadline,
+            ProgressPercent = project.ProgressPercent,
+            CreatedAt = project.CreatedAt,
+            ManagerName =
+                project.Manager?.Name ?? string.Empty,
+            IdeaId = project.IdeaId,
+            GuidelineId = project.GuidelineId,
+            Guideline = project.Guideline == null
+                ? null
+                : new GuidelineSummaryResponse
+                {
+                    Id = project.Guideline.Id,
+                    Title = project.Guideline.Title,
+                    Category = project.Guideline.Category,
+                    Campaign = project.Guideline.Campaign,
+                    IsActive = project.Guideline.IsActive
+                },
+            IsArchived = project.IsArchived
         };
     }
 }

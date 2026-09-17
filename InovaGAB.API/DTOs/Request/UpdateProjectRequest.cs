@@ -13,5 +13,6 @@ namespace InovaGAB.API.DTOs.Request
         public int? ProductivityGain { get; set; }
         public int? ProgressPercent {  get; set; }
         public DateTime? Deadline { get; set;  }
+        public string? GuidelineId { get; set; }
     }
 }

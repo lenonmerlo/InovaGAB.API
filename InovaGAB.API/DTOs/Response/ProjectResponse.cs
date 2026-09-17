@@ -1,4 +1,4 @@
-﻿namespace InovaGAB.API.DTOs.Response
+namespace InovaGAB.API.DTOs.Response
 {
     public class ProjectResponse
     {
@@ -18,5 +18,8 @@
         public DateTime CreatedAt {  get; set; }
         public string ManagerName { get; set; } = string.Empty;
         public string? IdeaId { get; set;  }
+        public string? GuidelineId { get; set; }
+        public GuidelineSummaryResponse? Guideline { get; set; }
+        public bool IsArchived { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace InovaGAB.API.DTOs.Request
+namespace InovaGAB.API.DTOs.Request
 {
     public class CreateProjectRequest
     {
@@ -11,5 +11,6 @@
         public DateTime Deadline {  get; set; }
 
         public string? IdeaId {  get; set; }
+        public string? GuidelineId { get; set; }
     }
 }

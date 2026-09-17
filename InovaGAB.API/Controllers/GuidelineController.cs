@@ -62,15 +62,34 @@ namespace InovaGAB.API.Controllers
             return Ok(guideline);
         }
 
+        [HttpGet("{id}/history")]
+        [Authorize(Roles = "Operator,Manager,Leader")]
+        public async Task<IActionResult> GetHistory(string id)
+        {
+            var history =
+                await _guidelineService.GetHistoryAsync(id);
+
+            if (history == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(history);
+        }
+
         [HttpPut("{id}")]
         [Authorize(Roles = "Leader")]
         public async Task<IActionResult> Update(
             string id,
             [FromBody] CreateGuidelineRequest request)
         {
+            var userId =
+                User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
             var result = await _guidelineService.UpdateAsync(
                 id,
-                request);
+                request,
+                userId);
 
             if (result == null)
             {

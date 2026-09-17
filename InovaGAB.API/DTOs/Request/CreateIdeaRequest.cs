@@ -1,4 +1,4 @@
-﻿namespace InovaGAB.API.DTOs.Request
+namespace InovaGAB.API.DTOs.Request
 {
     public class CreateIdeaRequest
     {
@@ -7,5 +7,6 @@
         public string Division { get; set; } = string.Empty;
         public string? EvidenceUrl { get; set; }
         public string? ChallengeId { get; set; }
+        public string? GuidelineId { get; set; }
     }
 }
